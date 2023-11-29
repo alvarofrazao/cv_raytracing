@@ -224,6 +224,8 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
     renderState.hit = false;
 }
 
+//"Color", "Displacement", "Normal", "Roughness","Metalness","Specular","Emission","AO"
+
 Material sample_material(float index, float u, float v) {
 
     Material material;

@@ -6,10 +6,12 @@ class MegaTexture:
         
         texture_size = 1024
         texture_count = len(filenames)
-        width = 5 * texture_size
+        
         height = texture_size
 
         image_types = ("Color", "Displacement", "Normal", "Roughness","Metalness","Specular","Emission","AO")
+
+        width = 5 * len(image_types)
         
         textureLayers = [Image.new(mode = "RGBA", size = (width, height)) for _ in range(texture_count)]
         for i in range(texture_count):
