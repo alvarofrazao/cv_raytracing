@@ -73,6 +73,7 @@ class Engine:
 
         self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 8)
         self.planeBuffer = buffer.Buffer(size = 1024, binding = 2, floatCount = 20)
+        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 7)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
                                         "shaders/frameBufferFragment.txt")
@@ -90,9 +91,13 @@ class Engine:
 
         for i,_plane in enumerate(_scene.planes):
             self.planeBuffer.recordPlane(i, _plane)
+        
+        for i,light in enumerate(_scene.light):
+            self.lightBuffer.recordLight(i,light)
 
         self.sphereBuffer.readFrom()
         self.planeBuffer.readFrom()
+        self.lightBuffer.readFrom()
 
         glActiveTexture(GL_TEXTURE3)
         glBindImageTexture(3,self.megaTexture.texture,0,GL_FALSE,0,GL_READ_ONLY, GL_RGBA32F)

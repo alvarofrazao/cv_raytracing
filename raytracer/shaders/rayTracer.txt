@@ -42,11 +42,22 @@ struct RenderState {
 };
 
 struct Material {
-    vec3 albedo;
-    vec3 emissive;
-    float gloss;
+    vec3 color;
     vec3 normal;
+    vec3 emissive;
     vec3 specular;
+
+    float roughness;
+    float ao;
+    float gloss;
+    float displacement;
+    
+};
+
+struct Light {
+    vec3 position;
+    vec3 color;
+    float strength;
 };
 
 // input/output
@@ -61,6 +72,10 @@ layout(std430, binding = 1) buffer sphereData {
 layout(std430, binding = 2) buffer planeData {
     Plane[] planes;
 };
+layout(std430, binding = 4) buffer lightData{
+    Light[] lights;
+};
+
 layout(rgba32f, binding = 3) readonly uniform image2DArray megaTexture;
 uniform ivec2 objectCounts;
 
@@ -188,7 +203,7 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
     
     float denom = dot(plane.normal, ray.direction); 
     
-    if (denom < 0.000001) {
+    if (abs(denom) > 0.000001) {
 
         float t = dot(plane.center - ray.origin, plane.normal) / denom; 
 
@@ -224,7 +239,7 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
     renderState.hit = false;
 }
 
-//"Color", "Displacement", "Normal", "Roughness","Metalness","Specular","Emission","AO"
+
 
 Material sample_material(float index, float u, float v) {
 
@@ -232,12 +247,16 @@ Material sample_material(float index, float u, float v) {
     ivec3 baseCoords = ivec3(floor(1024 * u), floor(1024 * v), index);
     ivec3 nextImage  = ivec3(1024, 0, 0);
 
-    material.albedo     = imageLoad(megaTexture, baseCoords).rgb;
-    material.emissive   = imageLoad(megaTexture, baseCoords + nextImage).rgb;
-    material.gloss      = imageLoad(megaTexture, baseCoords + 2 * nextImage).r;
-    material.normal     = imageLoad(megaTexture, baseCoords + 3 * nextImage).rgb;
-    material.normal     = 2.0 * material.normal - vec3(1.0); 
-    material.specular   = imageLoad(megaTexture, baseCoords + 4 * nextImage).rgb;
+    material.color          = imageLoad(megaTexture, baseCoords).rgb;
+    material.displacement   = imageLoad(megaTexture, baseCoords + 1 * nextImage).r;
+    material.normal         = imageLoad(megaTexture, baseCoords + 2 * nextImage).rgb;
+    material.normal         = 2.0 * material.normal - vec3(1.0);
+    material.roughness      = imageLoad(megaTexture, baseCoords + 3 * nextImage).r;
+    material.gloss          = imageLoad(megaTexture,baseCoords + 4 * nextImage).r;
+    material.specular       = imageLoad(megaTexture, baseCoords + 5 * nextImage).rgb;
+    metal.emissive          = imageLoad(megaTexture, baseCoords + 6 * nextImage).rgb;
+    metal.ao                = imageLoad(megaTexture, baseCoords + 7 * nextImage).r;
+
 
     return material;
 }

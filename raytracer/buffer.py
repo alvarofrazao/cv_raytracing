@@ -1,6 +1,7 @@
 from config import *
 import sphere
 import plane
+import light
 
 class Buffer:
 
@@ -20,6 +21,19 @@ class Buffer:
             self.hostMemory, GL_DYNAMIC_STORAGE_BIT)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, binding, self.deviceMemory)
         self.elements_written = 0
+
+    def recordLight(self, i: int, light: light.Light) -> None:
+        """
+            Record the given light sourc ein position i. If it exceeds the buffer size, 
+            the light is not recorded
+        """
+        if i >= self.size:
+            return
+        baseIndex = self.floatCount * i
+        self.hostMemory[baseIndex : baseIndex + 3] = light.position[:]
+        self.hostMemory[baseIndex + 3] = light.strength
+        self.hostMemory[baseIndex + 4: baseIndex + 7] = light.color[:]
+        self.elements_written += 1
     
     def recordSphere(self, i: int, _sphere: sphere.Sphere) -> None:
         """

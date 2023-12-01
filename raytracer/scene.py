@@ -2,6 +2,7 @@ from config import *
 import sphere
 import camera
 import plane
+import light
 
 class Scene:
     """
@@ -42,6 +43,22 @@ class Scene:
                 center = [i%3, i // 3, -1],
                 material_index = 1
             ) for i in range(9)
+        ]
+        
+        self.light = [
+            light.Light(
+                position = [
+                    np.random.uniform(low = 3.0, high = 10.0),
+                    np.random.uniform(low = -5.0, high = 5.0),
+                    np.random.uniform(low = -5.0, high = 5.0)
+                ],
+                strength = np.random.uniform(low = 1.0, high = 10.0),
+                color = [
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0)
+                ]
+            ) for i in range(2)
         ]
         
         self.camera = camera.Camera(
