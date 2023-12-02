@@ -77,7 +77,8 @@ layout(std430, binding = 4) buffer lightData{
 };
 
 layout(rgba32f, binding = 3) readonly uniform image2DArray megaTexture;
-uniform ivec2 objectCounts;
+uniform ivec3 objectCounts;
+uniform samplerCube skybox;
 
 RenderState trace(Ray ray);
 
@@ -87,12 +88,20 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renders
 
 Material sample_material(float index, float u, float v);
 
+float distanceTo(Ray ray, Sphere sphere);
+float distanceTo(Ray ray, Plane plane);
+
+vec3 light_fragment(RenderState renderState);
+
 void main() {
 
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 screen_size = imageSize(img_output);
 
+    int bounce_count = 32;
+
     vec3 finalColor = vec3(0.0);
+    RenderState renderState;
     for (int i = 0; i < 2; i++) {
 
 
@@ -109,18 +118,19 @@ void main() {
     
         vec3 pixel = vec3(1.0);
 
-        for (int bounce = 0; bounce < 4; bounce++) {
+        for (int bounce = 0; bounce < bounce_count; bounce++) {
         
 
-            RenderState renderState = trace(ray);
+            renderState = trace(ray);
 
             //early exit
             if (!renderState.hit) {
+                pixel = renderState.color;
                 break;
             }
         
             //unpack color
-            pixel = (pixel * renderState.color) + renderState.emissive;
+            pixel = (pixel * renderState.color) * light_fragment(renderState) + renderState.emissive;
 
             //set up ray for next trace
             ray.origin = renderState.position;
@@ -133,6 +143,10 @@ void main() {
         finalColor += 0.5 * pixel;
     }
 
+    if(renderState.hit){
+        finalColor = vec3(0.0);
+    }
+
     imageStore(img_output, pixel_coords, vec4(finalColor,1.0));
 }
 
@@ -140,7 +154,7 @@ RenderState trace(Ray ray) {
 
     RenderState renderState;
     renderState.hit = false;
-    renderState.color = vec3(1.0);
+    renderState.color = vec3(texture(skybox,ray.direction));
     bool hitSomething = false;
     
     float nearestHit = 999999999;
@@ -224,13 +238,13 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
 
                 renderState.position = testPoint;
                 renderState.t = t;
-                renderState.color = material.albedo;
+                renderState.color = material.color;
                 renderState.emissive = material.emissive;
                 renderState.roughness = max(0, 1.0 - material.gloss);
 
                 // maps tangent space into world space
                 mat3 TBN = mat3(plane.tangent, plane.bitangent, plane.normal);
-                renderState.normal = TBN * material.normal;
+                renderState.normal = normalize(TBN * material.normal);
                 renderState.hit = true;
                 return;
             }
@@ -239,7 +253,114 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
     renderState.hit = false;
 }
 
+vec3 light_fragment(RenderState renderState){
+    //ambient light
+    vec3 color = vec3(0.0);
 
+    for(int i = 0; i < objectCounts.z; i++)
+    {
+        bool blocked = false;
+
+        Light light = lights[i];
+
+        vec3 fragLight = light.position - renderState.position;
+
+        if(dot(fragLight, renderState.normal) <= 0){
+            continue;
+        }
+
+        float distanceToLight = length(fragLight);
+        fragLight = normalize(fragLight);
+
+        vec3 fragViewer = normalize(viewer.position - renderState.position);
+
+        vec3 halfway = normalize(fragViewer + fragLight);
+
+        Ray ray;
+        ray.origin = renderState.position;
+        ray.direction = fragLight;
+
+        for(int j = 0; j < objectCounts.x; j++){
+
+            float trialDist = distanceTo(ray, spheres[j]);
+
+            if (trialDist < distanceToLight) {
+                blocked = true;
+                break;
+            }
+        }
+        if (blocked) {
+            continue;
+        }
+
+        for (int j = 0; j < objectCounts.y; j++) {
+        
+            float trialDist = distanceTo(ray, planes[j]);
+        
+            if (trialDist < distanceToLight) {
+                blocked = true;
+                break;
+            }
+        }
+
+        if (!blocked) {
+            //Apply lighting
+            //diffuse
+            color += light.color * max(0.0, dot(renderState.normal, fragLight)) * light.strength / (distanceToLight * distanceToLight);
+            //specular
+            color += light.color * pow(max(0.0, dot(renderState.normal, halfway)),64) * light.strength / (distanceToLight * distanceToLight);
+        }
+    }
+
+    return color;
+}
+
+float distanceTo(Ray ray, Sphere sphere){
+
+    vec3 co = ray.origin - sphere.center;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2 * dot(ray.direction, co);
+    float c = dot(co, co) - sphere.radius * sphere.radius;
+    float discriminant = b * b - (4 * a * c);
+    
+    if (discriminant > 0.0) {
+
+        float t = (-b - sqrt(discriminant)) / (2 * a);
+
+        if (t < 0.0001) {
+            return 9999;
+        }
+
+        return length(t * ray.direction);
+    }
+
+    return 99999;
+}
+
+float distanceTo(Ray ray, Plane plane){
+
+    float denom = dot(plane.normal, ray.direction); 
+    
+    if (denom < 0.000001) {
+
+        float t = dot(plane.center - ray.origin, plane.normal) / denom; 
+
+        if (t < 0.0001) {
+            return 9999;
+        }
+
+        vec3 testPoint = ray.origin + t * ray.direction;
+        vec3 testDirection = testPoint - plane.center;
+
+        float u = dot(testDirection, plane.tangent);
+        float v = dot(testDirection, plane.bitangent);
+
+        if (u > plane.uMin && u < plane.uMax && v > plane.vMin && v < plane.vMax) {
+            return length(t * ray.direction);
+        }
+    }
+    return 9999;
+}
 
 Material sample_material(float index, float u, float v) {
 
@@ -254,8 +375,8 @@ Material sample_material(float index, float u, float v) {
     material.roughness      = imageLoad(megaTexture, baseCoords + 3 * nextImage).r;
     material.gloss          = imageLoad(megaTexture,baseCoords + 4 * nextImage).r;
     material.specular       = imageLoad(megaTexture, baseCoords + 5 * nextImage).rgb;
-    metal.emissive          = imageLoad(megaTexture, baseCoords + 6 * nextImage).rgb;
-    metal.ao                = imageLoad(megaTexture, baseCoords + 7 * nextImage).r;
+    material.emissive          = imageLoad(megaTexture, baseCoords + 6 * nextImage).rgb;
+    material.ao                = imageLoad(megaTexture, baseCoords + 7 * nextImage).r;
 
 
     return material;

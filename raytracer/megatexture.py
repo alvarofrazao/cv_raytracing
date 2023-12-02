@@ -11,14 +11,18 @@ class MegaTexture:
 
         image_types = ("Color", "Displacement", "Normal", "Roughness","Metalness","Specular","Emission","AO")
 
-        width = 5 * len(image_types)
+        width = texture_size * len(image_types)
         
         textureLayers = [Image.new(mode = "RGBA", size = (width, height)) for _ in range(texture_count)]
         for i in range(texture_count):
             for j, image_type in enumerate(image_types):
+                #print(f"textures\{filenames[i]}\{filenames[i]}_{image_type}.png")
                 with Image.open(f"textures\{filenames[i]}\{filenames[i]}_{image_type}.png", mode = "r") as img:
-                    img.convert("RGBA")
+                    img = img.convert("RGBA")
+                    #img.save(f"intermediate_{i}_{j}.png")
                     textureLayers[i].paste(img, (j * texture_size, 0))
+                    
+            #textureLayers[i].show()
 
         self.texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D_ARRAY, self.texture)

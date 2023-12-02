@@ -4,6 +4,7 @@ import material
 import scene
 import screen_quad
 import megatexture
+import cubemap 
 
 class Engine:
     """
@@ -21,6 +22,7 @@ class Engine:
 
         self.screenWidth = width
         self.screenHeight = height
+
 
         self.makeAssets()
     
@@ -69,7 +71,8 @@ class Engine:
 
         self.colorBuffer = material.Material(self.screenWidth, self.screenHeight)
 
-        self.createMegaTexture() 
+        self.createMegaTexture()
+        
 
         self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 8)
         self.planeBuffer = buffer.Buffer(size = 1024, binding = 2, floatCount = 20)
@@ -79,6 +82,11 @@ class Engine:
                                         "shaders/frameBufferFragment.txt")
         
         self.rayTracerShader = self.createComputeShader("shaders/rayTracer.txt")
+
+        self.skybox = cubemap.CubeMap("Skybox")
+
+        glUseProgram(self.rayTracerShader)
+        glUniform1i(glGetUniformLocation(self.rayTracerShader,"skybox"),6)
     
     def updateScene(self, _scene: scene.Scene) -> None:
 
@@ -92,7 +100,7 @@ class Engine:
         for i,_plane in enumerate(_scene.planes):
             self.planeBuffer.recordPlane(i, _plane)
         
-        for i,light in enumerate(_scene.light):
+        for i,light in enumerate(_scene.lights):
             self.lightBuffer.recordLight(i,light)
 
         self.sphereBuffer.readFrom()
@@ -102,7 +110,7 @@ class Engine:
         glActiveTexture(GL_TEXTURE3)
         glBindImageTexture(3,self.megaTexture.texture,0,GL_FALSE,0,GL_READ_ONLY, GL_RGBA32F)
 
-        glUniform2iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
+        glUniform3iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
 
     def prepareScene(self, _scene: scene.Scene) -> None:
         """
@@ -115,6 +123,8 @@ class Engine:
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.forwards"), 1, _scene.camera.forwards)
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.right"), 1, _scene.camera.right)
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.up"), 1, _scene.camera.up)
+
+        self.skybox.use()
 
         if _scene.outDated:
             self.updateScene(_scene)
