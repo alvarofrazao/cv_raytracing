@@ -40,26 +40,77 @@ class Scene:
                 uMax = 2,
                 vMin = -2,
                 vMax = 2,
-                center = [i%3, i // 3, -1],
-                material_index = 0
-            ) for i in range(1)
+                center = [
+                    np.random.uniform(low = -10.0, high = 10.0),
+                    np.random.uniform(low = -10.0, high = 10.0),
+                    np.random.uniform(low = -10.0, high = 10.0)],#center = [i%3, i // 3, -1],
+                material_index = 1
+            ) for i in range(5)
         ]
+
+        self.planes.append(plane.Plane(
+                normal = [0, 0, 1],
+                tangent = [1, 0, 0],
+                bitangent = [0, 1, 0],
+                uMin = -2,
+                uMax = 2,
+                vMin = -2,
+                vMax = 2,
+                center = [
+                    0,
+                    0,
+                    -4],#center = [i%3, i // 3, -1],
+                material_index = 0
+            ))
+        
+        self.planes.append(plane.Plane(
+                normal = [0, 0, 1],
+                tangent = [1, 0, 0],
+                bitangent = [0, 1, 0],
+                uMin = -2,
+                uMax = 2,
+                vMin = -2,
+                vMax = 2,
+                center = [
+                    0,
+                    0,
+                    4],#center = [i%3, i // 3, -1],
+                material_index = 0
+            ))
         
         self.lights = [
             light.Light(
                 position = [
-                    np.random.uniform(low = 3.0, high = 10.0),
-                    np.random.uniform(low = -5.0, high = 5.0),
-                    np.random.uniform(low = -5.0, high = 5.0)
+                    np.random.uniform(low = -10, high = 10.0),
+                    np.random.uniform(low = -10.0, high = 10.0),
+                    np.random.uniform(low = -10.0, high = 10.0)
                 ],
-                strength = np.random.uniform(low = 1.0, high = 10.0),
+                strength = np.random.uniform(low = 1.0, high = 200.0),
                 color = [
-                    np.random.uniform(low = 0.3, high = 1.0),
-                    np.random.uniform(low = 0.3, high = 1.0),
-                    np.random.uniform(low = 0.3, high = 1.0)
-                ]
-            ) for i in range(2)
+                    np.random.uniform(low = 254.0, high = 255.0),
+                    np.random.uniform(low = 254.0, high = 255.0),
+                    np.random.uniform(low = 254.0, high = 255.0)
+                ],
+                radius = 0.25,
+                point_count  = 16
+            ) for i in range(5)
         ]
+
+        self.lights.append(light.Light(
+            position = (0,0,4),
+            strength=50,
+            color = (1.0,1.0,1.0),
+            radius=0.25,
+            point_count = 16
+        ))
+
+        self.lights.append(light.Light(
+            position = (0,0,-4),
+            strength=50,
+            color = (1.0,1.0,1.0),
+            radius=0.25,
+            point_count = 16
+        ))
         
         self.camera = camera.Camera(
             position = [-1, 0, 0]

@@ -46,7 +46,7 @@ class Engine:
     def createMegaTexture(self):
 
         filenames = [
-            "MetalPlates"
+            "MetalPlates", "Metal01"
         ]
 
         self.megaTexture = megatexture.MegaTexture(filenames)

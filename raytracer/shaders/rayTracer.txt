@@ -58,6 +58,9 @@ struct Light {
     vec3 position;
     vec3 color;
     float strength;
+    float radius;
+    vec3[6] points;
+    int point_count;
 };
 
 // input/output
@@ -80,7 +83,7 @@ layout(rgba32f, binding = 3) readonly uniform image2DArray megaTexture;
 uniform ivec3 objectCounts;
 uniform samplerCube skybox;
 
-RenderState trace(Ray ray);
+RenderState trace(Ray ray, float max_dist);
 
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderstate);
 
@@ -91,6 +94,8 @@ Material sample_material(float index, float u, float v);
 float distanceTo(Ray ray, Sphere sphere);
 float distanceTo(Ray ray, Plane plane);
 
+vec3 shadowCalc(vec3 position);
+
 vec3 light_fragment(RenderState renderState);
 
 void main() {
@@ -99,10 +104,12 @@ void main() {
     ivec2 screen_size = imageSize(img_output);
 
     int bounce_count = 32;
+    int counter = 4;
 
     vec3 finalColor = vec3(0.0);
+    vec3 shadow_color = vec3(0.0);
     RenderState renderState;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
 
 
         
@@ -121,26 +128,27 @@ void main() {
         for (int bounce = 0; bounce < bounce_count; bounce++) {
         
 
-            renderState = trace(ray);
+            renderState = trace(ray, 99999999);
 
             //early exit
             if (!renderState.hit) {
-                pixel = renderState.color;
+                //pixel = renderState.color;
                 break;
             }
+
+            shadow_color = shadowCalc(renderState.position);
         
             //unpack color
-            pixel = (pixel * renderState.color) * light_fragment(renderState) + renderState.emissive;
+            pixel = (pixel * renderState.color) * light_fragment(renderState) + renderState.emissive * shadow_color;
 
             //set up ray for next trace
             ray.origin = renderState.position;
             ray.direction = reflect(ray.direction, renderState.normal);
 
             ray.direction = normalize(ray.direction + renderState.roughness);
-
         }
 
-        finalColor += 0.5 * pixel;
+        finalColor += 0.25 * pixel;
     }
 
     if(renderState.hit){
@@ -150,14 +158,17 @@ void main() {
     imageStore(img_output, pixel_coords, vec4(finalColor,1.0));
 }
 
-RenderState trace(Ray ray) {
+/*
+Does the ray tracing calculations
+*/
+RenderState trace(Ray ray,float max_dist) {
 
     RenderState renderState;
     renderState.hit = false;
-    renderState.color = vec3(texture(skybox,ray.direction));
+    renderState.color = vec3(0.0);//vec3(texture(skybox,ray.direction));//
     bool hitSomething = false;
     
-    float nearestHit = 999999999;
+    float nearestHit = max_dist;
     
     for (int i = 0; i < objectCounts.x; i++) {
 
@@ -186,6 +197,9 @@ RenderState trace(Ray ray) {
     return renderState;
 }
 
+/*
+Hit detection for sphere-type objects
+*/
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderState) {
 
     vec3 co = ray.origin - sphere.center;
@@ -213,6 +227,9 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
     renderState.hit = false;
 }
 
+/*
+Hit detection for plane-type objects
+*/
 void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderState) {
     
     float denom = dot(plane.normal, ray.direction); 
@@ -240,7 +257,7 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 renderState.t = t;
                 renderState.color = material.color;
                 renderState.emissive = material.emissive;
-                renderState.roughness = max(0, 1.0 - material.gloss);
+                renderState.roughness = max(material.roughness, 1.0 - material.gloss);
 
                 // maps tangent space into world space
                 mat3 TBN = mat3(plane.tangent, plane.bitangent, plane.normal);
@@ -315,6 +332,9 @@ vec3 light_fragment(RenderState renderState){
     return color;
 }
 
+/*
+Distance from ray origin to a sphere
+*/
 float distanceTo(Ray ray, Sphere sphere){
 
     vec3 co = ray.origin - sphere.center;
@@ -337,6 +357,9 @@ float distanceTo(Ray ray, Sphere sphere){
     return 99999;
 }
 
+/*
+Distance from ray origin to a plane
+*/
 float distanceTo(Ray ray, Plane plane){
 
     float denom = dot(plane.normal, ray.direction); 
@@ -362,6 +385,10 @@ float distanceTo(Ray ray, Plane plane){
     return 9999;
 }
 
+
+/*
+Returns all map values for a given texture contained in the megatexture based on the provided index and (u,v) coordinates
+*/
 Material sample_material(float index, float u, float v) {
 
     Material material;
@@ -380,4 +407,41 @@ Material sample_material(float index, float u, float v) {
 
 
     return material;
+}
+
+vec3 shadowCalc(vec3 position){
+
+    Ray shadow_ray;
+
+    shadow_ray.origin = position;
+    RenderState shadow_state;
+
+    float light_dist;
+    int counter = 0;
+    vec3 final_shadow = vec3(0.0);
+    vec3 shadow_cont;
+
+    for(int j = 0; j < objectCounts.z; j++){
+        
+        shadow_cont = vec3(0.0);
+        counter = 0;
+        for(int l = 0; l < lights[j].point_count; l++)
+        {
+            
+            shadow_ray.direction = normalize(lights[j].points[l] - position);
+            light_dist = distance(lights[j].points[l],position);
+            shadow_state = trace(shadow_ray,light_dist);
+            if(!shadow_state.hit){
+                shadow_cont += ((lights[j].color) * (lights[j].strength/pow(light_dist,64)));
+                counter++;
+            }
+        }
+        if(counter > 0)
+        {
+            shadow_cont = shadow_cont/counter;
+            final_shadow += shadow_cont;
+        }
+        
+    }
+    return final_shadow;
 }
