@@ -28,7 +28,7 @@ struct Plane {
     float vMin;
     vec3 normal;
     float vMax;
-    float material;
+    int material;
 };
 
 struct RenderState {
@@ -58,6 +58,9 @@ struct Light {
     vec3 position;
     vec3 color;
     float strength;
+    float radius;
+    vec3[6] points;
+    int point_count;
 };
 
 // input/output
@@ -77,9 +80,12 @@ layout(std430, binding = 4) buffer lightData{
 };
 
 layout(rgba32f, binding = 3) readonly uniform image2DArray megaTexture;
-uniform ivec2 objectCounts;
+layout(rgba32f, binding = 6) readonly uniform image2D noise;
 
-RenderState trace(Ray ray);
+uniform ivec3 objectCounts;
+uniform samplerCube skybox;
+
+RenderState trace(Ray ray, float max_dist);
 
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderstate);
 
@@ -87,15 +93,35 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renders
 
 Material sample_material(float index, float u, float v);
 
+float distanceTo(Ray ray, Sphere sphere);
+float distanceTo(Ray ray, Plane plane);
+
+vec3 shadowCalc(vec3 position);
+
+vec3 light_fragment(RenderState renderState);
+
 void main() {
 
     ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
     ivec2 screen_size = imageSize(img_output);
 
+    int bounce_count = 32;
+    int counter = 4;
+
     vec3 finalColor = vec3(0.0);
+    vec3 shadow_color = vec3(0.0);
+    vec3 pixel;
+    RenderState renderState;
     for (int i = 0; i < 2; i++) {
 
-
+        pixel = vec3(1.0);
+        vec2 screenDeflection = imageLoad(
+            noise, 
+            ivec2(
+                pixel_coords.x + i * screen_size.x,
+                pixel_coords.y
+            )
+        ).xy;
         
         float horizontalCoefficient = float(pixel_coords.x);
         horizontalCoefficient = (horizontalCoefficient * 2 - screen_size.x) / screen_size.x;
@@ -107,27 +133,36 @@ void main() {
         ray.origin = viewer.position;
         ray.direction = viewer.forwards + horizontalCoefficient * viewer.right + verticalCoefficient * viewer.up;
     
-        vec3 pixel = vec3(1.0);
-
-        for (int bounce = 0; bounce < 4; bounce++) {
         
 
-            RenderState renderState = trace(ray);
+        for (int bounce = 0; bounce < bounce_count; bounce++) {
+        
+
+            renderState = trace(ray, 99999999);
 
             //early exit
             if (!renderState.hit) {
+                //pixel = renderState.color;
                 break;
             }
+
+            shadow_color = shadowCalc(renderState.position);
         
             //unpack color
-            pixel = (pixel * renderState.color) + renderState.emissive;
+            pixel = (pixel * renderState.color) * light_fragment(renderState) + renderState.emissive * shadow_color;
 
             //set up ray for next trace
             ray.origin = renderState.position;
             ray.direction = reflect(ray.direction, renderState.normal);
+            vec3 variation = imageLoad(
+                noise, 
+                ivec2(
+                    pixel_coords.x + bounce * screen_size.x,
+                    pixel_coords.y
+                )
+            ).xyz;
 
             ray.direction = normalize(ray.direction + renderState.roughness);
-
         }
 
         finalColor += 0.5 * pixel;
@@ -136,14 +171,17 @@ void main() {
     imageStore(img_output, pixel_coords, vec4(finalColor,1.0));
 }
 
-RenderState trace(Ray ray) {
+/*
+Does the ray tracing calculations
+*/
+RenderState trace(Ray ray,float max_dist) {
 
     RenderState renderState;
     renderState.hit = false;
-    renderState.color = vec3(1.0);
+    renderState.color = vec3(0.0);//vec3(texture(skybox,ray.direction));//
     bool hitSomething = false;
     
-    float nearestHit = 999999999;
+    float nearestHit = max_dist;
     
     for (int i = 0; i < objectCounts.x; i++) {
 
@@ -172,6 +210,9 @@ RenderState trace(Ray ray) {
     return renderState;
 }
 
+/*
+Hit detection for sphere-type objects
+*/
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderState) {
 
     vec3 co = ray.origin - sphere.center;
@@ -199,6 +240,9 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
     renderState.hit = false;
 }
 
+/*
+Hit detection for plane-type objects
+*/
 void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderState) {
     
     float denom = dot(plane.normal, ray.direction); 
@@ -226,11 +270,11 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 renderState.t = t;
                 renderState.color = material.color;
                 renderState.emissive = material.emissive;
-                renderState.roughness = max(0, 1.0 - material.gloss);
+                renderState.roughness = material.roughness;
 
                 // maps tangent space into world space
                 mat3 TBN = mat3(plane.tangent, plane.bitangent, plane.normal);
-                renderState.normal = TBN * material.normal;
+                renderState.normal = normalize(TBN * material.normal);
                 renderState.hit = true;
                 return;
             }
@@ -239,8 +283,125 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
     renderState.hit = false;
 }
 
+vec3 light_fragment(RenderState renderState){
+    //ambient light
+    vec3 color = vec3(0.0);
+
+    for(int i = 0; i < objectCounts.z; i++)
+    {
+        bool blocked = false;
+
+        Light light = lights[i];
+
+        vec3 fragLight = light.position - renderState.position;
+
+        if(dot(fragLight, renderState.normal) <= 0){
+            continue;
+        }
+
+        float distanceToLight = length(fragLight);
+        fragLight = normalize(fragLight);
+
+        vec3 fragViewer = normalize(viewer.position - renderState.position);
+
+        vec3 halfway = normalize(fragViewer + fragLight);
+
+        Ray ray;
+        ray.origin = renderState.position;
+        ray.direction = fragLight;
+
+        for(int j = 0; j < objectCounts.x; j++){
+
+            float trialDist = distanceTo(ray, spheres[j]);
+
+            if (trialDist < distanceToLight) {
+                blocked = true;
+                break;
+            }
+        }
+        if (blocked) {
+            continue;
+        }
+
+        for (int j = 0; j < objectCounts.y; j++) {
+        
+            float trialDist = distanceTo(ray, planes[j]);
+        
+            if (trialDist < distanceToLight) {
+                blocked = true;
+                break;
+            }
+        }
+
+        if (!blocked) {
+            //Apply lighting
+            //diffuse
+            color += light.color * max(0.0, dot(renderState.normal, fragLight)) * light.strength / (distanceToLight * distanceToLight);
+            //specular
+            color += light.color * pow(max(0.0, dot(renderState.normal, halfway)),64) * light.strength / (distanceToLight * distanceToLight);
+        }
+    }
+
+    return color;
+}
+
+/*
+Distance from ray origin to a sphere
+*/
+float distanceTo(Ray ray, Sphere sphere){
+
+    vec3 co = ray.origin - sphere.center;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2 * dot(ray.direction, co);
+    float c = dot(co, co) - sphere.radius * sphere.radius;
+    float discriminant = b * b - (4 * a * c);
+    
+    if (discriminant > 0.0) {
+
+        float t = (-b - sqrt(discriminant)) / (2 * a);
+
+        if (t < 0.0001) {
+            return 9999;
+        }
+
+        return length(t * ray.direction);
+    }
+
+    return 99999;
+}
+
+/*
+Distance from ray origin to a plane
+*/
+float distanceTo(Ray ray, Plane plane){
+
+    float denom = dot(plane.normal, ray.direction); 
+    
+    if (denom < 0.000001) {
+
+        float t = dot(plane.center - ray.origin, plane.normal) / denom; 
+
+        if (t < 0.0001) {
+            return 9999;
+        }
+
+        vec3 testPoint = ray.origin + t * ray.direction;
+        vec3 testDirection = testPoint - plane.center;
+
+        float u = dot(testDirection, plane.tangent);
+        float v = dot(testDirection, plane.bitangent);
+
+        if (u > plane.uMin && u < plane.uMax && v > plane.vMin && v < plane.vMax) {
+            return length(t * ray.direction);
+        }
+    }
+    return 9999;
+}
 
 
+/*
+Returns all map values for a given texture contained in the megatexture based on the provided index and (u,v) coordinates
+*/
 Material sample_material(float index, float u, float v) {
 
     Material material;
@@ -259,4 +420,41 @@ Material sample_material(float index, float u, float v) {
 
 
     return material;
+}
+
+vec3 shadowCalc(vec3 position){
+
+    Ray shadow_ray;
+
+    shadow_ray.origin = position;
+    RenderState shadow_state;
+
+    float light_dist;
+    int counter = 0;
+    vec3 final_shadow = vec3(0.0);
+    vec3 shadow_cont;
+
+    for(int j = 0; j < objectCounts.z; j++){
+        
+        shadow_cont = vec3(0.0);
+        counter = 0;
+        for(int l = 0; l < lights[j].point_count; l++)
+        {
+            
+            shadow_ray.direction = normalize(lights[j].points[l] - position);
+            light_dist = distance(lights[j].points[l],position);
+            shadow_state = trace(shadow_ray,light_dist);
+            if(!shadow_state.hit){
+                shadow_cont += ((lights[j].color) * (lights[j].strength/pow(light_dist,64)));
+                counter++;
+            }
+        }
+        if(counter > 0)
+        {
+            shadow_cont = shadow_cont/counter;
+            final_shadow += shadow_cont;
+        }
+        
+    }
+    return final_shadow;
 }

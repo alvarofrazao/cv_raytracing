@@ -18,9 +18,9 @@ class Scene:
         self.spheres = [
             sphere.Sphere(
                 center = [
-                    np.random.uniform(low = 3.0, high = 45.0),
-                    np.random.uniform(low = -5.0, high = 25.0),
-                    np.random.uniform(low = -5.0, high = 25.0)
+                    np.random.uniform(low = 3.0, high = 10.0),
+                    np.random.uniform(low = -5.0, high = 10.0),
+                    np.random.uniform(low = -5.0, high = 10.0)
                 ],
                 radius = np.random.uniform(low = 0.3, high = 2.0),
                 color = [
@@ -28,7 +28,7 @@ class Scene:
                     np.random.uniform(low = 0.3, high = 1.0),
                     np.random.uniform(low = 0.3, high = 1.0)
                 ]
-            ) for i in range(64)
+            ) for i in range(2)
         ]
         
         self.planes = [
@@ -36,16 +36,13 @@ class Scene:
                 normal = [0, 0, 1],
                 tangent = [1, 0, 0],
                 bitangent = [0, 1, 0],
-                uMin = -2,
-                uMax = 2,
-                vMin = -2,
-                vMax = 2,
-                center = [
-                    np.random.uniform(low = -10.0, high = 10.0),
-                    np.random.uniform(low = -10.0, high = 10.0),
-                    np.random.uniform(low = -10.0, high = 10.0)],#center = [i%3, i // 3, -1],
-                material_index = 1
-            ) for i in range(5)
+                uMin = -0.5,
+                uMax = 0.5,
+                vMin = -0.5,
+                vMax = 0.5,
+                center = [i%3, i // 3, -1],
+                material_index = i
+            ) for i in range(6)
         ]
 
         self.planes.append(plane.Plane(
@@ -60,7 +57,7 @@ class Scene:
                     0,
                     0,
                     -4],#center = [i%3, i // 3, -1],
-                material_index = 0
+                material_index = 3
             ))
         
         self.planes.append(plane.Plane(
@@ -75,39 +72,40 @@ class Scene:
                     0,
                     0,
                     4],#center = [i%3, i // 3, -1],
-                material_index = 0
+                material_index = 3
             ))
-        
+
         self.lights = [
             light.Light(
-                position = [
-                    np.random.uniform(low = -10, high = 10.0),
-                    np.random.uniform(low = -10.0, high = 10.0),
-                    np.random.uniform(low = -10.0, high = 10.0)
-                ],
-                strength = np.random.uniform(low = 1.0, high = 200.0),
+                position = (0,0,0),
+                #""" [
+                #    np.random.uniform(low = -10, high = 10.0),
+                #    np.random.uniform(low = -10.0, high = 10.0),
+                #    np.random.uniform(low = -10.0, high = 10.0)
+                #] """,
+                strength = 3,#np.random.uniform(low = 1.0, high = 200.0),
                 color = [
-                    np.random.uniform(low = 254.0, high = 255.0),
-                    np.random.uniform(low = 254.0, high = 255.0),
-                    np.random.uniform(low = 254.0, high = 255.0)
+                    np.random.uniform(low = 0.2, high = 1.0),
+                    np.random.uniform(low = 0.2, high = 1.0),
+                    np.random.uniform(low = 0.2, high = 1.0)
                 ],
                 radius = 0.25,
                 point_count  = 16
-            ) for i in range(5)
+            ) for i in range(1)
         ]
 
         self.lights.append(light.Light(
             position = (0,0,4),
             strength=50,
-            color = (1.0,1.0,1.0),
+            color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
             radius=0.25,
             point_count = 16
         ))
 
         self.lights.append(light.Light(
-            position = (0,0,-4),
-            strength=50,
-            color = (1.0,1.0,1.0),
+            position = (0,0,0),
+            strength=100,
+            color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
             radius=0.25,
             point_count = 16
         ))
@@ -138,9 +136,9 @@ class Scene:
 
         self.camera.phi += dAngle[1]
 
-        if(self.camera.theta < -89):
-            self.camera.theta = -89
-        elif(self.camera.theta > 89):
-            self.camera.theta = 89
+        if(self.camera.theta < (-1000*360)):
+            self.camera.theta = 0
+        elif(self.camera.theta > (1000*360)):
+            self.camera.theta = 0
 
         self.camera.recalculateVectors()

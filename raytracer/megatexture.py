@@ -6,6 +6,7 @@ class MegaTexture:
         
         texture_size = 1024
         texture_count = len(filenames)
+        #print(f"texture_count = {texture_count}")
         
         height = texture_size
 

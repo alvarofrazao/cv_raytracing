@@ -25,9 +25,11 @@ class CubeMap:
                 elif img == 5:
                     img = img.rotate(90)
                 elif img == 0:
-                    imt = img.rotate(-90)
+                    img = img.rotate(90)
                 elif img == 1:
-                    imt = img.rotate(-90)
+                    img = img.rotate(-90)
+                elif img == 4:
+                    img = img.rotate(90)
                 img = img.convert("RGBA")
                 img_data = bytes(img.tobytes())
                 #img.save(f"intermediate_{i}_{j}.png")
