@@ -57,7 +57,7 @@ class Scene:
                     0,
                     0,
                     -4],#center = [i%3, i // 3, -1],
-                material_index = 3
+                material_index = float(3)
             ))
         
         self.planes.append(plane.Plane(
@@ -72,7 +72,7 @@ class Scene:
                     0,
                     0,
                     4],#center = [i%3, i // 3, -1],
-                material_index = 3
+                material_index = float(2)
             ))
 
         self.lights = [

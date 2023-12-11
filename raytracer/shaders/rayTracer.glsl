@@ -28,7 +28,7 @@ struct Plane {
     float vMin;
     vec3 normal;
     float vMax;
-    int material;
+    float material;
 };
 
 struct RenderState {
@@ -80,11 +80,13 @@ layout(std430, binding = 4) buffer lightData{
     Light[] lights;
 };
 
-layout(rgba32f, binding = 3) readonly uniform image2DArray megaTexture;
+layout(rgba32f, binding = 3) uniform image2DArray megaTexture;
 layout(rgba32f, binding = 6) readonly uniform image2D noise;
 
 uniform ivec3 objectCounts;
 uniform samplerCube skybox;
+
+const float pi = 3.14159265f;
 
 RenderState trace(Ray ray, float max_dist);
 
@@ -100,6 +102,10 @@ float distanceTo(Ray ray, Plane plane);
 vec3 shadowCalc(vec3 position, vec3 normal);
 
 vec3 light_fragment(RenderState renderState);
+
+vec2 sphereUV_equirectangular(vec3 d);
+
+vec2 sphereUV_EqualArea(vec3 d);
 
 void main() {
 
@@ -240,12 +246,22 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
 
         if (t > tMin && t < tMax) {
 
+            vec3 d = renderState.position-sphere.center;
+            d = d * sphere.radius;
+
+            vec2 tex_coords = sphereUV_equirectangular(d);
+
+            Material material = sample_material(2, tex_coords.x,tex_coords.y);
+
             renderState.position = ray.origin + t * ray.direction;
-            renderState.normal = normalize(renderState.position - sphere.center);
+            //renderState.normal = normalize(renderState.position - sphere.center);
+
+
             renderState.t = t;
-            renderState.color = sphere.color;
-            renderState.roughness = sphere.roughness;
-            renderState.emissive = vec3(0);
+            renderState.color = material.color;
+            renderState.roughness = material.roughness;
+            renderState.normal = material.normal;
+            renderState.emissive = sphere.color;
             renderState.hit = true;
             return;
         }
@@ -278,6 +294,11 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 v = (v - plane.vMin) / (plane.vMax - plane.vMin);
 
                 Material material = sample_material(plane.material, u, v);
+
+                /*if(plane.material == 1)
+                    Material material = sample_material(1, u, v);
+                if(plane.material == 2)
+                    Material material = sample_material(2, u, v);*/
 
                 renderState.position = testPoint;
                 renderState.t = t;
@@ -421,6 +442,18 @@ Material sample_material(float index, float u, float v) {
     ivec3 baseCoords = ivec3(floor(1024 * u), floor(1024 * v), index);
     ivec3 nextImage  = ivec3(1024, 0, 0);
 
+    /*
+    material.color          = texture(megaTexture, baseCoords).rgb;
+    material.displacement   = texture(megaTexture, baseCoords + 1 * nextImage).r;
+    material.normal         = texture(megaTexture, baseCoords + 2 * nextImage).rgb;
+    material.normal         = 2.0 * material.normal - vec3(1.0);
+    material.roughness      = texture(megaTexture, baseCoords + 3 * nextImage).r;
+    material.gloss          = texture(megaTexture, baseCoords + 4 * nextImage).r;
+    material.specular       = texture(megaTexture, baseCoords + 5 * nextImage).rgb;
+    material.emissive       = texture(megaTexture, baseCoords + 6 * nextImage).rgb;
+    material.ao             = texture(megaTexture, baseCoords + 7 * nextImage).r;
+    */
+    
     material.color          = imageLoad(megaTexture, baseCoords).rgb;
     material.displacement   = imageLoad(megaTexture, baseCoords + 1 * nextImage).r;
     material.normal         = imageLoad(megaTexture, baseCoords + 2 * nextImage).rgb;
@@ -430,7 +463,6 @@ Material sample_material(float index, float u, float v) {
     material.specular       = imageLoad(megaTexture, baseCoords + 5 * nextImage).rgb;
     material.emissive          = imageLoad(megaTexture, baseCoords + 6 * nextImage).rgb;
     material.ao                = imageLoad(megaTexture, baseCoords + 7 * nextImage).r;
-
 
     return material;
 }
@@ -477,4 +509,25 @@ vec3 shadowCalc(vec3 position, vec3 normal){
         final_shadow += shadow_cont;
     }
     return final_shadow;
+}
+
+
+vec2 sphereUV_equirectangular(vec3 d){
+
+    vec2 uv = vec2(0.0);
+
+    uv.x = 0.5 + atan(d.y,d.x)/(2*pi);
+    uv.y = 0.5 + asin(d.z);
+
+    return uv;
+}
+
+vec2 sphereUV_EqualArea(vec3 d){
+
+    vec2 uv = vec2(0.0);
+
+    uv.x = 0.5 * (atan(d.y,-d.x)/(pi+1));
+    uv.y = 0.5 + (asin(d.z)/pi);
+
+    return uv;
 }

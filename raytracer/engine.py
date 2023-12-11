@@ -145,9 +145,6 @@ class Engine:
         self.planeBuffer.readFrom()
         self.lightBuffer.readFrom()
 
-        glActiveTexture(GL_TEXTURE3)
-        glBindImageTexture(3,self.megaTexture.texture,0,GL_FALSE,0,GL_READ_ONLY, GL_RGBA32F)
-
         glUniform3iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
 
     def prepareScene(self, _scene: scene.Scene) -> None:
