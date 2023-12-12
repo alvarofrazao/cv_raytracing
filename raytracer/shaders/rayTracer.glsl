@@ -261,7 +261,7 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
             renderState.color = material.color;
             renderState.roughness = material.roughness;
             renderState.normal = material.normal;
-            renderState.emissive = sphere.color;
+            renderState.emissive = vec3(0.0);
             renderState.hit = true;
             return;
         }
@@ -294,11 +294,6 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 v = (v - plane.vMin) / (plane.vMax - plane.vMin);
 
                 Material material = sample_material(plane.material, u, v);
-
-                /*if(plane.material == 1)
-                    Material material = sample_material(1, u, v);
-                if(plane.material == 2)
-                    Material material = sample_material(2, u, v);*/
 
                 renderState.position = testPoint;
                 renderState.t = t;
