@@ -11,7 +11,7 @@ class Engine:
         Responsible for drawing scenes
     """
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, scene: scene.Scene):
         """
             Initialize a flat raytracing context
             
@@ -24,7 +24,7 @@ class Engine:
         self.screenHeight = height
 
 
-        self.makeAssets()
+        self.makeAssets(scene)
         self.createNoiseTexture()
     
     def createShader(self, vertexFilepath, fragmentFilepath):
@@ -102,7 +102,7 @@ class Engine:
         
         return shader
 
-    def makeAssets(self) -> None:
+    def makeAssets(self, scene: scene.Scene) -> None:
         """ Make all the stuff. """
 
         self.screenQuad = screen_quad.ScreenQuad()
@@ -112,9 +112,10 @@ class Engine:
         self.createMegaTexture()
         
 
-        self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 8)
-        self.planeBuffer = buffer.Buffer(size = 1024, binding = 2, floatCount = 20)
-        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 7)
+        self.sphereBuffer = buffer.Buffer(size = len(scene.spheres), binding = 1, floatCount = 8)
+        self.planeBuffer = buffer.Buffer(size = len(scene.planes), binding = 2, floatCount = 20)
+        self.lightBuffer = buffer.Buffer(size = len(scene.lights), binding = 4, floatCount = 7)
+        self.triangleBuffer = buffer.Buffer(size = len(scene.triangles), binding = 5, floatCount = 16)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
                                         "shaders/frameBufferFragment.txt")
@@ -128,7 +129,7 @@ class Engine:
     
     def updateScene(self, _scene: scene.Scene) -> None:
 
-        _scene.outDated = False
+        scene.outDated = False
 
         glUseProgram(self.rayTracerShader)
 
@@ -137,6 +138,9 @@ class Engine:
 
         for i,_plane in enumerate(_scene.planes):
             self.planeBuffer.recordPlane(i, _plane)
+            
+        for i,_triangle in enumerate(_scene.triangles):
+            self.triangleBuffer.recordTriangle(i, _triangle)    
         
         for i,light in enumerate(_scene.lights):
             self.lightBuffer.recordLight(i,light)
@@ -144,8 +148,9 @@ class Engine:
         self.sphereBuffer.readFrom()
         self.planeBuffer.readFrom()
         self.lightBuffer.readFrom()
+        self.triangleBuffer.readFrom()
 
-        glUniform3iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
+        glUniform4iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
 
     def prepareScene(self, _scene: scene.Scene) -> None:
         """
@@ -203,4 +208,5 @@ class Engine:
         self.colorBuffer.destroy()
         self.sphereBuffer.destroy()
         self.planeBuffer.destroy()
+        self.triangleBuffer.destroy()
         glDeleteProgram(self.shader)

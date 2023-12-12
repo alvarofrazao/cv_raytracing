@@ -1,5 +1,16 @@
 #version 430
 
+struct Triangle {
+    vec3 v0;
+    float r;
+    vec3 v1;
+    float g;
+    vec3 v2;
+    float b;
+    vec3 vn;
+    float padding4;
+};
+
 struct Sphere {
     vec3 center;
     float radius;
@@ -80,11 +91,14 @@ layout(std430, binding = 2) buffer planeData {
 layout(std430, binding = 4) buffer lightData{
     Light[] lights;
 };
+layout(std430, binding = 5) buffer triangleData {
+    Triangle[] triangles;
+};
 
 layout(rgba32f, binding = 3) uniform image2DArray megaTexture;
 layout(rgba32f, binding = 6) readonly uniform image2D noise;
 
-uniform ivec3 objectCounts;
+uniform ivec4 objectCounts;
 uniform samplerCube skybox;
 
 const float pi = 3.14159265f;
@@ -94,6 +108,8 @@ RenderState trace(Ray ray, float max_dist);
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderstate);
 
 void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderstate);
+
+void hit(Ray ray, Triangle triangle, float tMin, float tMax, inout RenderState renderstate);
 
 Material sample_material(float index, float u, float v);
 
@@ -224,6 +240,16 @@ RenderState trace(Ray ray,float max_dist) {
         }
     }
 
+    for (int i = 0; i < objectCounts.w; i++) {
+    
+       hit(ray, triangles[i], 0.001, nearestHit, renderState);
+    
+       if (renderState.hit) {
+            nearestHit = renderState.t;
+            hitSomething = true;
+        }
+    }
+
     if (hitSomething) {
         renderState.hit = true;
     }
@@ -313,6 +339,56 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
         }
     }
     renderState.hit = false;
+}
+
+/*
+Hit detection for plane-type objects
+*/
+void hit(Ray ray, Triangle triangle, float tMin, float tMax, inout RenderState renderState) {
+
+    renderState.hit = false;
+
+    vec3 norm = triangle.vn;
+    float ray_dot_tri = dot(ray.direction, norm);
+
+    if (ray_dot_tri > 0.0) {
+        norm = norm * -1;
+        ray_dot_tri = ray_dot_tri * -1;
+    }
+    
+    if (abs(ray_dot_tri) < 0.00001) {
+        return;
+    }
+
+    mat3 system_matrix = mat3(ray.direction, triangle.v0 - triangle.v1, triangle.v0 - triangle.v2);
+    float denominator = determinant(system_matrix);
+    if (abs(denominator) < 0.00001) {
+        return;
+    }
+
+    system_matrix = mat3(ray.direction, triangle.v0 - ray.origin, triangle.v0 - triangle.v2);
+    float u = determinant(system_matrix) / denominator;
+    if (u < 0.0 || u > 1.0) {
+        return;
+    }
+
+    system_matrix = mat3(ray.direction, triangle.v0 - triangle.v1, triangle.v0 - ray.origin);
+    float v = determinant(system_matrix) / denominator;
+    if (v < 0.0 || u + v > 1.0) {
+        return;
+    }
+
+    system_matrix = mat3(triangle.v0 - ray.origin, triangle.v0 - triangle.v1, triangle.v0 - triangle.v2);
+    float t = determinant(system_matrix) / denominator;
+
+    if (t > tMin && t < tMax) {
+
+        renderState.position = ray.origin + t * ray.direction;
+        renderState.normal = norm;
+        renderState.t = t;
+        renderState.color = vec3(triangle.r, triangle.g, triangle.b);
+        renderState.hit = true;
+    }
 }
 
 vec3 light_fragment(RenderState renderState){

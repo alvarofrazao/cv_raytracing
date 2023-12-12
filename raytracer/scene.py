@@ -3,6 +3,8 @@ import sphere
 import camera
 import plane
 import light
+import triangle
+from objparser import *
 
 class Scene:
     """
@@ -10,7 +12,7 @@ class Scene:
     """
 
 
-    def __init__(self):
+    def __init__(self,modelpath):
         """
             Set up scene objects.
         """
@@ -114,7 +116,32 @@ class Scene:
             position = [-1, 0, 0]
         )
 
-        self.objectCounts = np.array([len(self.spheres), len(self.planes), len(self.lights)], dtype = np.int32)
+        objects = ObjParser(modelpath)
+        
+        self.triangles = []
+        temp = []
+        #objects vem do parser
+        
+        for _object in objects:
+            # _object [0] = nome do objeto ||  _object[1] = info dos triangulos
+            color = [
+                    np.random.uniform(low = 1, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1),
+                    np.random.uniform(low = 0.3, high = 1.0)
+            ]
+            corners= []
+            if(True):
+                print("Loading object: "+ _object[0])
+                for value in _object[1]:
+                    temp.append(value)
+                    if len(temp) == 5:
+                        corners.append([temp[2],temp[3],temp[4]])
+                        temp = []
+                    if len(corners) == 3:
+                        self.triangles.append(triangle.Triangle(corners, color))
+                        corners= []
+
+        self.objectCounts = np.array([len(self.spheres), len(self.planes), len(self.lights), len(self.triangles)], dtype = np.int32)
 
         self.outDated = True
 

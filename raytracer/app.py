@@ -13,9 +13,11 @@ class App:
         self.screenWidth = 1366
         self.screenHeight = 768
         self.setupPygame()
+        
+        self.scene = scene.Scene("models/cube.obj")
 
-        self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight)
-        self.scene = scene.Scene()
+        self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight, self.scene)
+
 
         self.setupTimer()
 

@@ -2,6 +2,7 @@ from config import *
 import sphere
 import plane
 import light
+import triangle
 
 class Buffer:
 
@@ -75,6 +76,29 @@ class Buffer:
         self.hostMemory[baseIndex + 15]                     = _plane.vMax
 
         self.hostMemory[baseIndex + 16] = _plane.material_index
+        self.elements_written += 1
+
+    def recordTriangle(self, i: int, _triangle: triangle.Triangle) -> None:
+        """
+            Record the given sphere in position i, if this exceeds the buffer size,
+            the sphere is not recorded.
+        """
+
+        if i >= self.size:
+            return
+
+        baseIndex = self.floatCount * i
+
+        for j in range(3):
+            self.hostMemory[baseIndex + 4*j : baseIndex + 4*j + 3] =\
+                _triangle.corners[j][:]
+        
+        self.hostMemory[baseIndex + 12 : baseIndex + 15] = _triangle.normal[:]
+
+        self.hostMemory[baseIndex + 3] = _triangle.color[0]
+        self.hostMemory[baseIndex + 7] = _triangle.color[1]
+        self.hostMemory[baseIndex + 11] = _triangle.color[2]
+
         self.elements_written += 1
     
     def readFrom(self) -> None:
