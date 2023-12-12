@@ -128,7 +128,7 @@ class Engine:
     
     def updateScene(self, _scene: scene.Scene) -> None:
 
-        scene.outDated = False
+        _scene.outDated = False
 
         glUseProgram(self.rayTracerShader)
 

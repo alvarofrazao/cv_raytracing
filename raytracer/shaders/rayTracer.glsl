@@ -39,7 +39,7 @@ struct RenderState {
     vec3 normal;
     bool hit;
     float roughness;
-
+    float reflectivity;
 };
 
 struct Material {
@@ -52,7 +52,8 @@ struct Material {
     float ao;
     float gloss;
     float displacement;
-    
+
+
 };
 
 struct Light {
@@ -120,6 +121,7 @@ void main() {
     vec3 pixel;
     Ray ray;
     RenderState renderState;
+    renderState.reflectivity = 1.0;
     //renderState.color = vec3(0.0);
 
     bool hasHit;
@@ -157,7 +159,7 @@ void main() {
                 pixel = vec3(texture(skybox,ray.direction));;
                 break;
             }
-            if(!renderState.hit){
+            if(!renderState.hit || (renderState.reflectivity <= 0.0)){
                 break;
             }
 
@@ -249,19 +251,20 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
             vec3 d = renderState.position-sphere.center;
             d = d * sphere.radius;
 
-            vec2 tex_coords = sphereUV_equirectangular(d);
+            vec2 tex_coords = sphereUV_EqualArea(d);
 
             Material material = sample_material(2, tex_coords.x,tex_coords.y);
 
             renderState.position = ray.origin + t * ray.direction;
-            //renderState.normal = normalize(renderState.position - sphere.center);
+            renderState.normal = normalize(renderState.position - sphere.center);
 
 
             renderState.t = t;
-            renderState.color = material.color;
+            renderState.color = sphere.color;
             renderState.roughness = material.roughness;
-            renderState.normal = material.normal;
+            //renderState.normal = material.normal;
             renderState.emissive = vec3(0.0);
+            renderState.reflectivity = 0.5;
             renderState.hit = true;
             return;
         }
@@ -300,7 +303,7 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 renderState.color = material.color;
                 renderState.emissive = material.emissive;
                 renderState.roughness = material.roughness;
-
+                renderState.reflectivity = material.gloss;
                 // maps tangent space into world space
                 mat3 TBN = mat3(plane.tangent, plane.bitangent, plane.normal);
                 renderState.normal = normalize(TBN * material.normal);

@@ -28,7 +28,7 @@ class Scene:
                     np.random.uniform(low = 0.3, high = 1.0),
                     np.random.uniform(low = 0.3, high = 1.0)
                 ]
-            ) for i in range(2)
+            ) for i in range(16)
         ]
         
         self.planes = [
