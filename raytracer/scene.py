@@ -16,68 +16,113 @@ class Scene:
         """
             Set up scene objects.
         """
-        
-        self.spheres = [
+        color = [[0.66,0.33,0.33],[0.33,0.66,0.33],[0.33,0.33,0.66]]
+
+        self.spheres = []
+        self.spheres.append(
             sphere.Sphere(
                 center = [
-                    np.random.uniform(low = 3.0, high = 10.0),
-                    np.random.uniform(low = -5.0, high = 10.0),
-                    np.random.uniform(low = -5.0, high = 10.0)
+                    np.random.uniform(low = 1, high = 1),
+                    np.random.uniform(low = 0, high = 0),
+                    np.random.uniform(low = 0, high = 0)
                 ],
-                radius = np.random.uniform(low = 0.3, high = 2.0),
-                color = [
-                    np.random.uniform(low = 0.3, high = 1.0),
-                    np.random.uniform(low = 0.3, high = 1.0),
-                    np.random.uniform(low = 0.3, high = 1.0)
-                ]
-            ) for i in range(16)
-        ]
+                radius = np.random.uniform(low = 0.6, high = 0.6),
+                color = color[0]
+            )
+        )
+        self.spheres.append(
+            sphere.Sphere(
+                center = [
+                    np.random.uniform(low = 0, high = 0),
+                    np.random.uniform(low = 1, high = 1),
+                    np.random.uniform(low = 0, high = 0)
+                ],
+                radius = np.random.uniform(low = 0.6, high = 0.6),
+                color = color[1]
+            )
+        )
+        self.spheres.append(
+            sphere.Sphere(
+                center = [
+                    np.random.uniform(low = 0, high = 0),
+                    np.random.uniform(low = 0, high = 0),
+                    np.random.uniform(low = 1, high = 1)
+                ],
+                radius = np.random.uniform(low = 0.6, high = 0.6),
+                color = color[2]
+            )
+        )
         
-        self.planes = [
+        self.planes = []
+        self.planes.append( # top
             plane.Plane(
                 normal = [0, 0, 1],
-                tangent = [1, 0, 0],
-                bitangent = [0, 1, 0],
-                uMin = -0.5,
-                uMax = 0.5,
-                vMin = -0.5,
-                vMax = 0.5,
-                center = [i%3, i // 3, -1],
-                material_index = i
-            ) for i in range(6)
-        ]
-
-        self.planes.append(plane.Plane(
-                normal = [0, 0, 1],
-                tangent = [1, 0, 0],
-                bitangent = [0, 1, 0],
+                tangent = [0, 1, 0],
+                bitangent = [1, 0, 0],
+                uMin = -4,
+                uMax = 4,
+                vMin = -2,
+                vMax = 2,
+                center = [0, 0, -1],
+                material_index = 1
+            )
+        )
+        self.planes.append( # left
+            plane.Plane(
+                normal = [0, 1, 0],
+                tangent = [0, 0, 1],
+                bitangent = [1, 0, 0],
                 uMin = -2,
                 uMax = 2,
                 vMin = -2,
                 vMax = 2,
-                center = [
-                    0,
-                    0,
-                    -4],#center = [i%3, i // 3, -1],
-                material_index = float(3)
-            ))
+                center = [0, 4, 1],
+                material_index = 1
+            )
+        )
+        self.planes.append( # right
+            plane.Plane(
+                normal = [0, -1, 0],
+                tangent = [0, 0, 1],
+                bitangent = [1, 0, 0],
+                uMin = -2,
+                uMax = 2,
+                vMin = -2,
+                vMax = 2,
+                center = [0, -4, 1],
+                material_index = 1
+            )
+        )
+        self.planes.append( # bottom
+            plane.Plane(
+                normal = [0, 0, -1],
+                tangent = [0, 1, 0],
+                bitangent = [1, 0, 0],
+                uMin = -4,
+                uMax = 4,
+                vMin = -2,
+                vMax = 2,
+                center = [0, 0, 3],
+                material_index = 1
+            )
+        )
+        self.planes.append( # fundo
+            plane.Plane(
+                normal = [-1, 0, 0],
+                tangent = [0, 1, 0],
+                bitangent = [0, 0, 1],
+                uMin = -4,
+                uMax = 4,
+                vMin = -2,
+                vMax = 2,
+                center = [2, 0, 1],
+                material_index = 1
+            )
+        )        
         
-        self.planes.append(plane.Plane(
-                normal = [0, 0, 1],
-                tangent = [1, 0, 0],
-                bitangent = [0, 1, 0],
-                uMin = -2,
-                uMax = 2,
-                vMin = -2,
-                vMax = 2,
-                center = [
-                    0,
-                    0,
-                    4],#center = [i%3, i // 3, -1],
-                material_index = float(2)
-            ))
+        self.lights = []
 
-        self.lights = [
+        self.lights.append(
             light.Light(
                 position = (0,0,0),
                 #""" [
@@ -93,55 +138,48 @@ class Scene:
                 ],
                 radius = 0.25,
                 point_count  = 16
-            ) for i in range(1)
-        ]
-
-        self.lights.append(light.Light(
-            position = (0,0,4),
-            strength=50,
-            color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
-            radius=0.25,
-            point_count = 16
-        ))
-
-        self.lights.append(light.Light(
-            position = (0,0,0),
-            strength=100,
-            color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
-            radius=0.25,
-            point_count = 16
-        ))
-        
-        self.camera = camera.Camera(
-            position = [-1, 0, 0]
+            )
         )
+        
 
         objects = ObjParser(modelpath)
         
         self.triangles = []
+
+        model_ratio = 0.4
+        
         temp = []
         #objects vem do parser
-        
+        self.triangle_temp  = []
         for _object in objects:
             # _object [0] = nome do objeto ||  _object[1] = info dos triangulos
-            color = [
-                    np.random.uniform(low = 1, high = 1.0),
-                    np.random.uniform(low = 0.3, high = 1),
-                    np.random.uniform(low = 0.3, high = 1.0)
-            ]
             corners= []
             if(True):
                 print("Loading object: "+ _object[0])
                 for value in _object[1]:
                     temp.append(value)
                     if len(temp) == 5:
-                        corners.append([temp[2],temp[3],temp[4]])
+                        corners.append([temp[2]*model_ratio,temp[3]*model_ratio,temp[4]*model_ratio])
                         temp = []
                     if len(corners) == 3:
-                        self.triangles.append(triangle.Triangle(corners, color))
+                        self.triangle_temp.append(corners)
                         corners= []
 
+        positions = [[1,0,0],[0,1,0],[0,0,1]]
+        for i,position in enumerate(positions):
+            for triangle_corners in self.triangle_temp:
+                triangle_t =[]
+                for corner in triangle_corners:
+                    triangle_t.append([corner[0]+position[0],corner[1]+position[1],corner[2]+position[2]])
+                self.triangles.append(triangle.Triangle(corners = triangle_t , color = color[i]))
+
+        
+
         self.objectCounts = np.array([len(self.spheres), len(self.planes), len(self.lights), len(self.triangles)], dtype = np.int32)
+
+        self.camera = camera.Camera(
+            position = [-5, 0, 1]
+        )
 
         self.outDated = True
 

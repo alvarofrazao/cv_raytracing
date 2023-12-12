@@ -16,8 +16,8 @@ class MegaTexture:
         
         textureLayers = [Image.new(mode = "RGBA", size = (width, height)) for _ in range(texture_count)]
         for i in range(texture_count):
+            print(f"Loading textures\{filenames[i]}")
             for j, image_type in enumerate(image_types):
-                #print(f"textures\{filenames[i]}\{filenames[i]}_{image_type}.png")
                 with Image.open(f"textures\{filenames[i]}\{filenames[i]}_{image_type}.png", mode = "r") as img:
                     img = img.convert("RGBA")
                     #img.save(f"intermediate_{i}_{j}.png")

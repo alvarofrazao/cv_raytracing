@@ -23,6 +23,7 @@ class Engine:
         self.screenWidth = width
         self.screenHeight = height
 
+        self.state = 1
 
         self.makeAssets(scene)
         self.createNoiseTexture()
@@ -127,29 +128,36 @@ class Engine:
         glUseProgram(self.rayTracerShader)
         glUniform1i(glGetUniformLocation(self.rayTracerShader,"skybox"),6)
     
+    def changeScene(self, state):
+        self.state = state
+        scene.outDated = True
+
+
     def updateScene(self, _scene: scene.Scene) -> None:
 
         scene.outDated = False
 
         glUseProgram(self.rayTracerShader)
 
-        for i,_sphere in enumerate(_scene.spheres):
-            self.sphereBuffer.recordSphere(i, _sphere)
-
         for i,_plane in enumerate(_scene.planes):
             self.planeBuffer.recordPlane(i, _plane)
-            
-        for i,_triangle in enumerate(_scene.triangles):
-            self.triangleBuffer.recordTriangle(i, _triangle)    
-        
+
         for i,light in enumerate(_scene.lights):
             self.lightBuffer.recordLight(i,light)
+
+        for i,_sphere in enumerate(_scene.spheres):
+            self.sphereBuffer.recordSphere(i, _sphere)
+ 
+        for i,_triangle in enumerate(_scene.triangles):
+            self.triangleBuffer.recordTriangle(i, _triangle)    
+
 
         self.sphereBuffer.readFrom()
         self.planeBuffer.readFrom()
         self.lightBuffer.readFrom()
         self.triangleBuffer.readFrom()
 
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "state"), self.state) 
         glUniform4iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
 
     def prepareScene(self, _scene: scene.Scene) -> None:
@@ -189,6 +197,7 @@ class Engine:
         glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
         self.drawScreen()
+
 
     def drawScreen(self) -> None:
         glUseProgram(self.shader)

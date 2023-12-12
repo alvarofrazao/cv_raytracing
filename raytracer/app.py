@@ -13,7 +13,7 @@ class App:
         self.screenWidth = 1366
         self.screenHeight = 768
         self.setupPygame()
-        
+
         self.scene = scene.Scene("models/cube.obj")
 
         self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight, self.scene)
@@ -64,7 +64,7 @@ class App:
                     scene.camera.position[1] += 2
                 if (event.type == pg.K_a):
                     scene.camera.position[1] -= 2
-            
+
             #render
             self.graphicsEngine.renderScene(self.scene)
 
@@ -101,6 +101,12 @@ class App:
         elif keys[pg.K_DOWN]:
             theta_increment = self.frameTime* 0.0005 *((self.screenWidth//2))
             self.scene.spin_player((theta_increment,0))
+        elif keys[pg.K_1]:
+            self.graphicsEngine.changeScene(0)
+        elif keys[pg.K_2]:
+            self.graphicsEngine.changeScene(1)
+        elif keys[pg.K_3]:
+            self.graphicsEngine.changeScene(2)
             
 
     def handleMouse(self):

@@ -99,6 +99,7 @@ layout(rgba32f, binding = 3) uniform image2DArray megaTexture;
 layout(rgba32f, binding = 6) readonly uniform image2D noise;
 
 uniform ivec4 objectCounts;
+uniform int state;
 uniform samplerCube skybox;
 
 const float pi = 3.14159265f;
@@ -220,13 +221,25 @@ RenderState trace(Ray ray,float max_dist) {
     
     float nearestHit = max_dist;
     
-    for (int i = 0; i < objectCounts.x; i++) {
-
-        hit(ray, spheres[i], 0.001, nearestHit, renderState);
-
+    if ( state == 0) {
+        for (int i = 0; i < objectCounts.w; i++) {
+        
+        hit(ray, triangles[i], 0.001, nearestHit, renderState);
+        
         if (renderState.hit) {
-            nearestHit = renderState.t;
-            hitSomething = true;
+                nearestHit = renderState.t;
+                hitSomething = true;
+            }
+        }
+    } else {
+        for (int i = 0; i < objectCounts.x; i++) {
+
+            hit(ray, spheres[i], 0.001, nearestHit, renderState);
+
+            if (renderState.hit) {
+                nearestHit = renderState.t;
+                hitSomething = true;
+            }
         }
     }
 
@@ -240,15 +253,6 @@ RenderState trace(Ray ray,float max_dist) {
         }
     }
 
-    for (int i = 0; i < objectCounts.w; i++) {
-    
-       hit(ray, triangles[i], 0.001, nearestHit, renderState);
-    
-       if (renderState.hit) {
-            nearestHit = renderState.t;
-            hitSomething = true;
-        }
-    }
 
     if (hitSomething) {
         renderState.hit = true;
