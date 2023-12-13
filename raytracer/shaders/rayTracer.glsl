@@ -5,6 +5,7 @@ struct Sphere {
     float radius;
     vec3 color;
     float roughness;
+    float reflectivity;
 };
 
 struct Camera {
@@ -52,8 +53,6 @@ struct Material {
     float ao;
     float gloss;
     float displacement;
-
-
 };
 
 struct Light {
@@ -61,9 +60,26 @@ struct Light {
     vec3 color;
     float strength;
     float radius;
-    vec3[6] points;
-    int point_count;
 };
+
+vec3[16] points = vec3[16](
+    vec3(1.0,0.0,0.0),
+    vec3(1.0,1.0,0.0),
+    vec3(1.0,0.0,1.0),
+    vec3(0.0,1.0,0.0),
+    vec3(0.0,1.0,1.0),
+    vec3(0.0,0.0,1.0),
+    vec3(1.0,1.0,1.0),
+    vec3(-1.0,0.0,0.0),
+    vec3(-1.0,-1.0,0.0),
+    vec3(-1.0,-1.0,-1.0),
+    vec3(-1.0,0.0,-1.0),
+    vec3(0.0,-1.0,-1.0),
+    vec3(0.0,0.0,-1.0),
+    vec3(1.0,-1.0,0.0),
+    vec3(-1.0,1.0,0.0),
+    vec3(1.0,-1.0,1.0)
+);
 
 // input/output
 layout(local_size_x = 8, local_size_y = 8) in;
@@ -95,6 +111,8 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
 
 void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderstate);
 
+void hit(Ray ray, Light light, float tMin, float tMax, inout RenderState renderState);
+
 Material sample_material(float index, float u, float v);
 
 float distanceTo(Ray ray, Sphere sphere);
@@ -121,20 +139,21 @@ void main() {
     vec3 pixel;
     Ray ray;
     RenderState renderState;
-    renderState.reflectivity = 1.0;
+    renderState.reflectivity = 0.0;
+    renderState.hit = false;
     //renderState.color = vec3(0.0);
 
     bool hasHit;
     for (int i = 0; i < 2; i++) {
 
         pixel = vec3(1.0);
-        vec2 screenDeflection = imageLoad(
+        /*vec2 screenDeflection = imageLoad(
             noise, 
             ivec2(
                 pixel_coords.x + i * screen_size.x,
                 pixel_coords.y
             )
-        ).xy;
+        ).xy;*/
         
         float horizontalCoefficient = float(pixel_coords.x);
         horizontalCoefficient = (horizontalCoefficient * 2 - screen_size.x) / screen_size.x;
@@ -159,10 +178,12 @@ void main() {
                 pixel = vec3(texture(skybox,ray.direction));;
                 break;
             }
-            if(!renderState.hit || (renderState.reflectivity <= 0.0)){
+            
+            if(!renderState.hit){
+                //If * instead of +, metal materials have softer colors that slightly resemble the skybox, idk which one is correct
+                pixel = pixel + vec3(texture(skybox,ray.direction));
                 break;
             }
-
 
             hasHit = true;
 
@@ -172,16 +193,20 @@ void main() {
             pixel = (pixel * renderState.color) + light_fragment(renderState);
             pixel = pixel + (shadow_color) ;
 
+            if(renderState.reflectivity <= 0.0){
+                break;
+            }
+
             //set up ray for next trace
             ray.origin = renderState.position;
             ray.direction = reflect(ray.direction, renderState.normal);
-            vec3 variation = imageLoad(
+            /*vec3 variation = imageLoad(
                 noise, 
                 ivec2(
                     pixel_coords.x + bounce * screen_size.x,
                     pixel_coords.y
                 )
-            ).xyz;
+            ).xyz;*/
 
             ray.direction = normalize(ray.direction + renderState.roughness);
         }
@@ -249,7 +274,7 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
         if (t > tMin && t < tMax) {
 
             vec3 d = renderState.position-sphere.center;
-            d = d * sphere.radius;
+            d = normalize(d);
 
             vec2 tex_coords = sphereUV_EqualArea(d);
 
@@ -260,11 +285,12 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
 
 
             renderState.t = t;
+            //renderState.color = vec3(0.0);
             renderState.color = sphere.color;
             renderState.roughness = material.roughness;
             //renderState.normal = material.normal;
             renderState.emissive = vec3(0.0);
-            renderState.reflectivity = 0.5;
+            renderState.reflectivity = sphere.reflectivity;
             renderState.hit = true;
             return;
         }
@@ -310,6 +336,32 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 renderState.hit = true;
                 return;
             }
+        }
+    }
+    renderState.hit = false;
+}
+
+void hit(Ray ray, Light light, float tMin, float tMax, inout RenderState renderState){
+    
+    vec3 co = ray.origin - light.position;
+    float a = dot(ray.direction, ray.direction);
+    float b = 2* dot(ray.direction,co);
+    float c = dot(co,co) - light.radius * light.radius;
+    float discriminant = b * b - (4*a*c);
+
+    if(discriminant > 0.0){
+        float t = (-b - sqrt(discriminant)) / (2 * a);
+
+        if (t > tMin && t < tMax) {
+
+            renderState.t = t;
+            renderState.color = light.color;
+            renderState.roughness = 0;
+            renderState.normal = vec3(0.0);
+            renderState.emissive = vec3(0.0);
+            renderState.reflectivity = 0.0;
+            renderState.hit = true;
+            return;
         }
     }
     renderState.hit = false;
@@ -473,6 +525,7 @@ vec3 shadowCalc(vec3 position, vec3 normal){
     RenderState shadow_state;
 
     float light_dist;
+    vec3 light_point;
 
     int counter;
 
@@ -484,25 +537,25 @@ vec3 shadowCalc(vec3 position, vec3 normal){
         shadow_cont = vec3(0.0);
         counter = 0;
 
-        for(int l = 0; l < lights[j].point_count; l++)
+        for(int l = 0; l < 16; l++)
         {
-            
-            shadow_ray.direction = normalize(lights[j].points[l] - position);
+            light_point = points[l]*lights[j].radius + lights[j].position;
+            shadow_ray.direction = normalize(light_point - position);
 
             if(dot(shadow_ray.direction, normal) <= 0){
                 continue;
             }
 
-            light_dist = distance(lights[j].points[l],position);
+            light_dist = distance(light_point,position);
             shadow_state = trace(shadow_ray,light_dist);
             if(!shadow_state.hit){
-                shadow_cont += ((lights[j].color) * 1)/ (light_dist * light_dist);
+                shadow_cont += ((lights[j].color) * lights[j].strength)/ (light_dist * light_dist);
                 counter++;
             }
         }
         if(counter > 0)
         {
-            shadow_cont = shadow_cont/counter;
+            shadow_cont = shadow_cont/16;
         }
         final_shadow += shadow_cont;
     }

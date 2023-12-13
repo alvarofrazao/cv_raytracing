@@ -33,6 +33,7 @@ class Buffer:
         self.hostMemory[baseIndex : baseIndex + 3] = light.position[:]
         self.hostMemory[baseIndex + 3] = light.strength
         self.hostMemory[baseIndex + 4: baseIndex + 7] = light.color[:]
+        self.hostMemory[baseIndex + 7] = light.radius
         self.elements_written += 1
     
     def recordSphere(self, i: int, _sphere: sphere.Sphere) -> None:
@@ -48,6 +49,8 @@ class Buffer:
         self.hostMemory[baseIndex : baseIndex + 3] = _sphere.center[:]
         self.hostMemory[baseIndex + 3] = _sphere.radius
         self.hostMemory[baseIndex + 4 : baseIndex + 7] = _sphere.color[:]
+        self.hostMemory[baseIndex + 7] = _sphere.roughness
+        self.hostMemory[baseIndex + 8] = _sphere.reflectivity
         self.elements_written += 1
     
     def recordPlane(self, i: int, _plane: plane.Plane) -> None:
@@ -93,3 +96,9 @@ class Buffer:
         """
 
         glDeleteBuffers(1, (self.deviceMemory,))
+
+    def printBufferData(self) -> None:
+        for i in range(2):
+            print(f"element {i}:\n")
+            for j in range(self.floatCount):       
+                print(f"float {j} - {self.hostMemory[j+(self.floatCount * i)]}\n")

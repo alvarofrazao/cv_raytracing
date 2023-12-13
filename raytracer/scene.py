@@ -14,11 +14,12 @@ class Scene:
         """
             Set up scene objects.
         """
-        
+        self.sphere_count = 16
+
         self.spheres = [
             sphere.Sphere(
                 center = [
-                    np.random.uniform(low = 3.0, high = 10.0),
+                    i*np.random.uniform(low = 3.0, high = 10.0),
                     np.random.uniform(low = -5.0, high = 10.0),
                     np.random.uniform(low = -5.0, high = 10.0)
                 ],
@@ -28,8 +29,11 @@ class Scene:
                     np.random.uniform(low = 0.3, high = 1.0),
                     np.random.uniform(low = 0.3, high = 1.0)
                 ]
-            ) for i in range(16)
+                #reflectivity = np.random.uniform(low = 0.3, high = 1.0)
+            ) for i in range(self.sphere_count)
         ]
+
+
         
         self.planes = [
             plane.Plane(
@@ -83,7 +87,7 @@ class Scene:
                 #    np.random.uniform(low = -10.0, high = 10.0),
                 #    np.random.uniform(low = -10.0, high = 10.0)
                 #] """,
-                strength = 3,#np.random.uniform(low = 1.0, high = 200.0),
+                strength = 5,#np.random.uniform(low = 1.0, high = 200.0),
                 color = [
                     np.random.uniform(low = 0.2, high = 1.0),
                     np.random.uniform(low = 0.2, high = 1.0),
@@ -96,7 +100,7 @@ class Scene:
 
         self.lights.append(light.Light(
             position = (0,0,4),
-            strength=50,
+            strength=1,
             color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
             radius=0.25,
             point_count = 16
@@ -104,7 +108,7 @@ class Scene:
 
         self.lights.append(light.Light(
             position = (0,0,0),
-            strength=100,
+            strength=1,
             color = (np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0),np.random.uniform(low = 0.2, high = 1.0)),
             radius=0.25,
             point_count = 16
@@ -114,7 +118,7 @@ class Scene:
             position = [-1, 0, 0]
         )
 
-        self.objectCounts = np.array([len(self.spheres), len(self.planes), len(self.lights)], dtype = np.int32)
+        self.objectCounts = np.array([self.sphere_count, len(self.planes), len(self.spheres)], dtype = np.int32)
 
         self.outDated = True
 

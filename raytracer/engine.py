@@ -112,9 +112,9 @@ class Engine:
         self.createMegaTexture()
         
 
-        self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 8)
+        self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 10)
         self.planeBuffer = buffer.Buffer(size = 1024, binding = 2, floatCount = 20)
-        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 7)
+        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 9)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
                                         "shaders/frameBufferFragment.txt")
@@ -140,6 +140,7 @@ class Engine:
         
         for i,light in enumerate(_scene.lights):
             self.lightBuffer.recordLight(i,light)
+
 
         self.sphereBuffer.readFrom()
         self.planeBuffer.readFrom()
