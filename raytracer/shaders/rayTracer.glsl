@@ -52,8 +52,6 @@ struct Material {
     float ao;
     float gloss;
     float displacement;
-
-
 };
 
 struct Light {
@@ -159,7 +157,7 @@ void main() {
                 pixel = vec3(texture(skybox,ray.direction));;
                 break;
             }
-            if(!renderState.hit || (renderState.reflectivity <= 0.0)){
+            if(!renderState.hit){
                 break;
             }
 
