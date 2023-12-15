@@ -37,8 +37,8 @@ class Scene:
             ) for i in range(8)
         ]
         
-        # for _sphere in self.spheres:
-        #     print(_sphere.center,_sphere.radius,_sphere.color)
+        for _sphere in self.spheres:
+            print(_sphere.center,_sphere.radius,_sphere.color)
         
         self.planes = []
         self.planes.append( # top

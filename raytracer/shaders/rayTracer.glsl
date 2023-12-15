@@ -106,9 +106,6 @@ layout(std430, binding = 5) buffer triangleData {
     Triangle[] triangles;
 };
 
-layout(std430, binding = 5) buffer triangleData {
-    Triangle[] triangles;
-};
 layout(rgba32f, binding = 3) uniform image2DArray megaTexture;
 layout(rgba32f, binding = 6) readonly uniform image2D noise;
 

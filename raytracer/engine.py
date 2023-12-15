@@ -22,7 +22,7 @@ class Engine:
 
         self.screenWidth = width
         self.screenHeight = height
-
+        self.counter = 0
         self.state = 1
 
         self.makeAssets(scene)
@@ -106,6 +106,8 @@ class Engine:
     def changeScene(self, state):
         self.state = state
         self.outDated = True
+        counter += 1
+        print(counter)
         
     def makeAssets(self, scene: scene.Scene) -> None:
         """ Make all the stuff. """
@@ -134,6 +136,7 @@ class Engine:
     def changeScene(self, state):
         self.state = state
         scene.outDated = True
+        print("aqui")
 
 
     def updateScene(self, _scene: scene.Scene) -> None:
