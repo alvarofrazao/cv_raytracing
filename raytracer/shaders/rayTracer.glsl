@@ -41,6 +41,7 @@ struct RenderState {
     bool hit;
     float roughness;
     float reflectivity;
+    bool hitLight;
 };
 
 struct Material {
@@ -142,6 +143,7 @@ void main() {
     renderState.reflectivity = 0.0;
     renderState.hit = false;
     //renderState.color = vec3(0.0);
+    renderState.hitLight = false;
 
     bool hasHit;
     for (int i = 0; i < 2; i++) {
@@ -185,13 +187,18 @@ void main() {
                 break;
             }
 
+            /*if(renderState.hitLight && !hasHit){
+                pixel = pixel * renderState.color;
+                break;
+            }*/
+
             hasHit = true;
 
-            shadow_color = shadowCalc(renderState.position, renderState.normal);
+            //shadow_color = shadowCalc(renderState.position, renderState.normal);
         
             //unpack color
             pixel = (pixel * renderState.color) + light_fragment(renderState);
-            pixel = pixel + (shadow_color) ;
+            //pixel = pixel + (shadow_color) ;
 
             if(renderState.reflectivity <= 0.0){
                 break;
@@ -248,6 +255,17 @@ RenderState trace(Ray ray,float max_dist) {
             hitSomething = true;
         }
     }
+
+    /*for(int i = 0; i < objectCounts.z; i++){
+
+        hit(ray,lights[i], 0.001, nearestHit,renderState);
+
+        if(renderState.hit){
+            nearestHit = renderState.t;
+            hitSomething = true;
+            renderState.hitLight = true;
+        }
+    }*/
 
     if (hitSomething) {
         renderState.hit = true;
