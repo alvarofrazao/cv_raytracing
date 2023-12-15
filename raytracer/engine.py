@@ -103,6 +103,10 @@ class Engine:
         
         return shader
 
+    def changeScene(self, state):
+        self.state = state
+        self.outDated = True
+        
     def makeAssets(self, scene: scene.Scene) -> None:
         """ Make all the stuff. """
 
@@ -112,10 +116,9 @@ class Engine:
 
         self.createMegaTexture()
         
-
-        self.sphereBuffer = buffer.Buffer(size = len(scene.spheres), binding = 1, floatCount = 8)
+        self.sphereBuffer = buffer.Buffer(size = len(scene.spheres), binding = 1, floatCount = 12)
         self.planeBuffer = buffer.Buffer(size = len(scene.planes), binding = 2, floatCount = 20)
-        self.lightBuffer = buffer.Buffer(size = len(scene.lights), binding = 4, floatCount = 7)
+        self.lightBuffer = buffer.Buffer(size = len(scene.lights), binding = 4, floatCount = 8)
         self.triangleBuffer = buffer.Buffer(size = len(scene.triangles), binding = 5, floatCount = 16)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
@@ -139,24 +142,23 @@ class Engine:
 
         glUseProgram(self.rayTracerShader)
 
+        for i,_sphere in enumerate(_scene.spheres):
+            self.sphereBuffer.recordSphere(i,_sphere)
+            
         for i,_plane in enumerate(_scene.planes):
             self.planeBuffer.recordPlane(i, _plane)
 
         for i,light in enumerate(_scene.lights):
             self.lightBuffer.recordLight(i,light)
 
-        for i,_sphere in enumerate(_scene.spheres):
-            self.sphereBuffer.recordSphere(i, _sphere)
- 
         for i,_triangle in enumerate(_scene.triangles):
-            self.triangleBuffer.recordTriangle(i, _triangle)    
-
-
+            self.triangleBuffer.recordTriangle(i, _triangle)  
+            
         self.sphereBuffer.readFrom()
         self.planeBuffer.readFrom()
         self.lightBuffer.readFrom()
         self.triangleBuffer.readFrom()
-
+        
         glUniform1i(glGetUniformLocation(self.rayTracerShader, "state"), self.state) 
         glUniform4iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
 

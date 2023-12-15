@@ -13,11 +13,9 @@ class App:
         self.screenWidth = 1366
         self.screenHeight = 768
         self.setupPygame()
-
-        self.scene = scene.Scene("models/cube.obj")
-
+        self.scene = scene.Scene()
         self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight, self.scene)
-
+        
 
         self.setupTimer()
 
@@ -106,8 +104,7 @@ class App:
         elif keys[pg.K_2]:
             self.graphicsEngine.changeScene(1)
         elif keys[pg.K_3]:
-            self.graphicsEngine.changeScene(2)
-            
+            self.graphicsEngine.changeScene(2)            
 
     def handleMouse(self):
 

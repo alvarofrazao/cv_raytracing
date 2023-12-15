@@ -12,46 +12,33 @@ class Scene:
     """
 
 
-    def __init__(self,modelpath):
+    def __init__(self):
         """
             Set up scene objects.
         """
-        color = [[0.66,0.33,0.33],[0.33,0.66,0.33],[0.33,0.33,0.66]]
+        color = [[0.66,0.0,0],[0.33,0.66,0.33],[0.33,0.33,0.66]]
 
-        self.spheres = []
-        self.spheres.append(
+        self.spheres = [
             sphere.Sphere(
                 center = [
-                    np.random.uniform(low = 1, high = 1),
-                    np.random.uniform(low = 0, high = 0),
-                    np.random.uniform(low = 0, high = 0)
+                    np.random.uniform(low = -1.0, high = 1.0),
+                    np.random.uniform(low = -2.0, high = 2.0),
+                    np.random.uniform(low = -1.0, high = 1.0)
                 ],
-                radius = np.random.uniform(low = 0.6, high = 0.6),
-                color = color[0]
-            )
-        )
-        self.spheres.append(
-            sphere.Sphere(
-                center = [
-                    np.random.uniform(low = 0, high = 0),
-                    np.random.uniform(low = 1, high = 1),
-                    np.random.uniform(low = 0, high = 0)
+                radius = np.random.uniform(low = 0.3, high = 0.3),
+                color = [
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0),
+                    np.random.uniform(low = 0.3, high = 1.0)
                 ],
-                radius = np.random.uniform(low = 0.6, high = 0.6),
-                color = color[1]
-            )
-        )
-        self.spheres.append(
-            sphere.Sphere(
-                center = [
-                    np.random.uniform(low = 0, high = 0),
-                    np.random.uniform(low = 0, high = 0),
-                    np.random.uniform(low = 1, high = 1)
-                ],
-                radius = np.random.uniform(low = 0.6, high = 0.6),
-                color = color[2]
-            )
-        )
+                roughness=0.0,
+                reflectivity=0.8
+                #reflectivity = np.random.uniform(low = 0.3, high = 1.0)
+            ) for i in range(8)
+        ]
+        
+        # for _sphere in self.spheres:
+        #     print(_sphere.center,_sphere.radius,_sphere.color)
         
         self.planes = []
         self.planes.append( # top
@@ -77,7 +64,7 @@ class Scene:
                 vMin = -2,
                 vMax = 2,
                 center = [0, 4, 1],
-                material_index = 1
+                material_index = 0
             )
         )
         self.planes.append( # right
@@ -90,7 +77,7 @@ class Scene:
                 vMin = -2,
                 vMax = 2,
                 center = [0, -4, 1],
-                material_index = 1
+                material_index = 3
             )
         )
         self.planes.append( # bottom
@@ -118,7 +105,21 @@ class Scene:
                 center = [2, 0, 1],
                 material_index = 1
             )
-        )        
+        )
+        
+        self.planes.append( # tr'as
+            plane.Plane(
+                normal = [1, 0, 0],
+                tangent = [0, 1, 0],
+                bitangent = [0, 0, 1],
+                uMin = -8,
+                uMax = 8,
+                vMin = -8,
+                vMax = 8,
+                center = [-8, 0, 1],
+                material_index = 2
+            )
+        )         
         
         self.lights = []
 
@@ -142,7 +143,7 @@ class Scene:
         )
         
 
-        objects = ObjParser(modelpath)
+        objects = ObjParser("models/cube.obj")
         
         self.triangles = []
 
@@ -176,7 +177,7 @@ class Scene:
         
 
         self.objectCounts = np.array([len(self.spheres), len(self.planes), len(self.lights), len(self.triangles)], dtype = np.int32)
-
+        print(self.objectCounts)
         self.camera = camera.Camera(
             position = [-5, 0, 1]
         )

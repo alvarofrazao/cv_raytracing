@@ -42,6 +42,17 @@ struct Plane {
     float material;
 };
 
+struct Triangle {
+    vec3 v0;
+    float r;
+    vec3 v1;
+    float g;
+    vec3 v2;
+    float b;
+    vec3 vn;
+    float padding4;
+};
+
 struct RenderState {
     float t;
     vec3 color;
@@ -95,6 +106,9 @@ layout(std430, binding = 5) buffer triangleData {
     Triangle[] triangles;
 };
 
+layout(std430, binding = 5) buffer triangleData {
+    Triangle[] triangles;
+};
 layout(rgba32f, binding = 3) uniform image2DArray megaTexture;
 layout(rgba32f, binding = 6) readonly uniform image2D noise;
 
@@ -109,6 +123,8 @@ RenderState trace(Ray ray, float max_dist);
 void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState renderstate);
 
 void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderstate);
+
+void hit(Ray ray, Light light, float tMin, float tMax, inout RenderState renderState);
 
 void hit(Ray ray, Triangle triangle, float tMin, float tMax, inout RenderState renderstate);
 
@@ -176,7 +192,10 @@ void main() {
                 pixel = vec3(texture(skybox,ray.direction));;
                 break;
             }
-            if(!renderState.hit || (renderState.reflectivity <= 0.0)){
+            
+            if(!renderState.hit){
+                //If * instead of +, metal materials have softer colors that slightly resemble the skybox, idk which one is correct
+                pixel = pixel + vec3(texture(skybox,ray.direction))/10;
                 break;
             }
 
@@ -188,6 +207,10 @@ void main() {
             //unpack color
             pixel = (pixel * renderState.color) + light_fragment(renderState);
             pixel = pixel + (shadow_color) ;
+
+            if(renderState.reflectivity <= 0.0){
+                break;
+            }
 
             //set up ray for next trace
             ray.origin = renderState.position;
@@ -220,7 +243,6 @@ RenderState trace(Ray ray,float max_dist) {
     bool hitSomething = false;
     
     float nearestHit = max_dist;
-    
     if ( state == 0) {
         for (int i = 0; i < objectCounts.w; i++) {
         
@@ -291,8 +313,9 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
 
             renderState.t = t;
             renderState.color = sphere.color;
-            renderState.roughness = material.roughness;
+            //renderState.roughness = material.roughness;
             //renderState.normal = material.normal;
+            renderState.roughness = sphere.roughness;
             renderState.emissive = vec3(0.0);
             renderState.reflectivity = 0.5;
             renderState.hit = true;
@@ -346,7 +369,7 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
 }
 
 /*
-Hit detection for plane-type objects
+Hit detection for triangle-type objects
 */
 void hit(Ray ray, Triangle triangle, float tMin, float tMax, inout RenderState renderState) {
 
@@ -394,6 +417,7 @@ void hit(Ray ray, Triangle triangle, float tMin, float tMax, inout RenderState r
         renderState.hit = true;
     }
 }
+
 
 vec3 light_fragment(RenderState renderState){
     //ambient light
