@@ -41,7 +41,6 @@ struct RenderState {
     bool hit;
     float roughness;
     float reflectivity;
-    bool hitLight;
 };
 
 struct Material {
@@ -58,29 +57,53 @@ struct Material {
 
 struct Light {
     vec3 position;
-    vec3 color;
     float strength;
+    vec3 color;
     float radius;
 };
 
-vec3[16] points = vec3[16](
-    vec3(1.0,0.0,0.0),
-    vec3(1.0,1.0,0.0),
-    vec3(1.0,0.0,1.0),
-    vec3(0.0,1.0,0.0),
-    vec3(0.0,1.0,1.0),
-    vec3(0.0,0.0,1.0),
-    vec3(1.0,1.0,1.0),
-    vec3(-1.0,0.0,0.0),
-    vec3(-1.0,-1.0,0.0),
-    vec3(-1.0,-1.0,-1.0),
-    vec3(-1.0,0.0,-1.0),
-    vec3(0.0,-1.0,-1.0),
-    vec3(0.0,0.0,-1.0),
-    vec3(1.0,-1.0,0.0),
-    vec3(-1.0,1.0,0.0),
-    vec3(1.0,-1.0,1.0)
-);
+const float light_radius = 0.05;
+
+const vec3[32] points = {
+    vec3(light_radius, 0.0, 0.0),
+    vec3(-light_radius, 0.0, 0.0),
+    vec3(0.0, light_radius, 0.0),
+    vec3(0.0, -light_radius, 0.0),
+    vec3(0.0, 0.0, light_radius),
+    vec3(0.0, 0.0, -light_radius),
+    
+    vec3(light_radius, light_radius, 0.0),
+    vec3(light_radius, -light_radius, 0.0),
+    vec3(-light_radius, light_radius, 0.0),
+    vec3(-light_radius, -light_radius, 0.0),
+    vec3(light_radius, 0.0, light_radius),
+    vec3(light_radius, 0.0, -light_radius),
+    vec3(-light_radius, 0.0, light_radius),
+    vec3(-light_radius, 0.0, -light_radius),
+    vec3(0.0, light_radius, light_radius),
+    vec3(0.0, light_radius, -light_radius),
+    vec3(0.0, -light_radius, light_radius),
+    vec3(0.0, -light_radius, -light_radius),
+    
+    vec3(light_radius, light_radius, light_radius),
+    vec3(light_radius, light_radius, -light_radius),
+    vec3(light_radius, -light_radius, light_radius),
+    vec3(light_radius, -light_radius, -light_radius),
+    vec3(-light_radius, light_radius, light_radius),
+    vec3(-light_radius, light_radius, -light_radius),
+    vec3(-light_radius, -light_radius, light_radius),
+    vec3(-light_radius, -light_radius, -light_radius),
+
+    vec3(0.0, light_radius, light_radius),
+    vec3(0.0, light_radius, -light_radius),
+    vec3(0.0, -light_radius, light_radius),
+    vec3(0.0, -light_radius, -light_radius),
+
+    vec3(light_radius, 0.0, light_radius),
+    vec3(light_radius, 0.0, -light_radius)
+};
+
+
 
 // input/output
 layout(local_size_x = 8, local_size_y = 8) in;
@@ -143,10 +166,10 @@ void main() {
     renderState.reflectivity = 0.0;
     renderState.hit = false;
     //renderState.color = vec3(0.0);
-    renderState.hitLight = false;
+
 
     bool hasHit;
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 1; i++) {
 
         pixel = vec3(1.0);
         /*vec2 screenDeflection = imageLoad(
@@ -175,30 +198,25 @@ void main() {
 
             renderState = trace(ray, 99999999);
 
-            //early exit
-            if (!renderState.hit && !hasHit) {
-                pixel = vec3(texture(skybox,ray.direction));;
-                break;
+            if(!hasHit){
+                if(!renderState.hit){
+                    pixel = vec3(texture(skybox,ray.direction));
+                    break;
+                }else{
+                    hasHit = true;
+                }
             }
-            
-            if(!renderState.hit){
-                //If * instead of +, metal materials have softer colors that slightly resemble the skybox, idk which one is correct
-                pixel = pixel + vec3(texture(skybox,ray.direction));
-                break;
+            else{
+                if(!renderState.hit){
+                    pixel = pixel + vec3(texture(skybox,ray.direction));
+                    break;
+                }
             }
-
-            /*if(renderState.hitLight && !hasHit){
-                pixel = pixel * renderState.color;
-                break;
-            }*/
-
-            hasHit = true;
-
-            //shadow_color = shadowCalc(renderState.position, renderState.normal);
+       
         
-            //unpack color
             pixel = (pixel * renderState.color) + light_fragment(renderState);
-            //pixel = pixel + (shadow_color) ;
+
+            
 
             if(renderState.reflectivity <= 0.0){
                 break;
@@ -218,7 +236,7 @@ void main() {
             ray.direction = normalize(ray.direction + renderState.roughness);
         }
 
-        finalColor += 0.5 * pixel;
+        finalColor += 1 * pixel;
     }
 
     imageStore(img_output, pixel_coords, vec4(finalColor,1.0));
@@ -256,20 +274,10 @@ RenderState trace(Ray ray,float max_dist) {
         }
     }
 
-    /*for(int i = 0; i < objectCounts.z; i++){
-
-        hit(ray,lights[i], 0.001, nearestHit,renderState);
-
-        if(renderState.hit){
-            nearestHit = renderState.t;
-            hitSomething = true;
-            renderState.hitLight = true;
-        }
-    }*/
-
     if (hitSomething) {
         renderState.hit = true;
     }
+
         
     return renderState;
 }
@@ -291,12 +299,12 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
 
         if (t > tMin && t < tMax) {
 
-            vec3 d = renderState.position-sphere.center;
+            /*vec3 d = renderState.position-sphere.center;
             d = normalize(d);
 
-            vec2 tex_coords = sphereUV_EqualArea(d);
+            vec2 tex_coords = sphereUV_equirectangular(d);
 
-            Material material = sample_material(2, tex_coords.x,tex_coords.y);
+            Material material = sample_material(2, tex_coords.x,tex_coords.y);*/
 
             renderState.position = ray.origin + t * ray.direction;
             renderState.normal = normalize(renderState.position - sphere.center);
@@ -305,7 +313,9 @@ void hit(Ray ray, Sphere sphere, float tMin, float tMax, inout RenderState rende
             renderState.t = t;
             //renderState.color = vec3(0.0);
             renderState.color = sphere.color;
-            renderState.roughness = material.roughness;
+            //renderState.color = material.color;
+            renderState.roughness = sphere.roughness;
+            //renderState.roughness = material.roughness;
             //renderState.normal = material.normal;
             renderState.emissive = vec3(0.0);
             renderState.reflectivity = sphere.reflectivity;
@@ -345,12 +355,14 @@ void hit(Ray ray, Plane plane, float tMin, float tMax, inout RenderState renderS
                 renderState.position = testPoint;
                 renderState.t = t;
                 renderState.color = material.color;
+                //renderState.color = vec3(0.5,0.4,0.8);
                 renderState.emissive = material.emissive;
                 renderState.roughness = material.roughness;
                 renderState.reflectivity = material.gloss;
                 // maps tangent space into world space
                 mat3 TBN = mat3(plane.tangent, plane.bitangent, plane.normal);
                 renderState.normal = normalize(TBN * material.normal);
+                renderState.normal = plane.normal;
                 renderState.hit = true;
                 return;
             }
@@ -364,7 +376,7 @@ void hit(Ray ray, Light light, float tMin, float tMax, inout RenderState renderS
     vec3 co = ray.origin - light.position;
     float a = dot(ray.direction, ray.direction);
     float b = 2* dot(ray.direction,co);
-    float c = dot(co,co) - light.radius * light.radius;
+    float c = dot(co,co) - 0.25 * 0.25;
     float discriminant = b * b - (4*a*c);
 
     if(discriminant > 0.0){
@@ -372,8 +384,9 @@ void hit(Ray ray, Light light, float tMin, float tMax, inout RenderState renderS
 
         if (t > tMin && t < tMax) {
 
+            float dist = length(ray.origin-light.position);
             renderState.t = t;
-            renderState.color = light.color;
+            renderState.color = light.color*light.strength;
             renderState.roughness = 0;
             renderState.normal = vec3(0.0);
             renderState.emissive = vec3(0.0);
@@ -389,59 +402,74 @@ vec3 light_fragment(RenderState renderState){
     //ambient light
     vec3 color = vec3(0.0);
 
+    int counter;
+
     for(int i = 0; i < objectCounts.z; i++)
     {
-        bool blocked = false;
-
+        
+        counter = 0;
         Light light = lights[i];
 
-        vec3 fragLight = light.position - renderState.position;
+        for(int l = 0; l < 32; l++){
 
-        if(dot(fragLight, renderState.normal) <= 0){
-            continue;
-        }
+        
+            bool blocked = false;
+            vec3 fragLight = (light.position + points[l]) - renderState.position;
 
-        float distanceToLight = length(fragLight);
-        fragLight = normalize(fragLight);
+            if(dot(fragLight, renderState.normal) <= 0){
+                continue;
+            }
 
-        vec3 fragViewer = normalize(viewer.position - renderState.position);
+            float distanceToLight = length(fragLight);
+            fragLight = normalize(fragLight);
 
-        vec3 halfway = normalize(fragViewer + fragLight);
+            vec3 fragViewer = normalize(viewer.position - renderState.position);
 
-        Ray ray;
-        ray.origin = renderState.position;
-        ray.direction = fragLight;
+            vec3 halfway = normalize(fragViewer + fragLight);
 
-        for(int j = 0; j < objectCounts.x; j++){
+            Ray ray;
+            ray.origin = renderState.position;
+            ray.direction = fragLight;
 
-            float trialDist = distanceTo(ray, spheres[j]);
+            for(int j = 0; j < objectCounts.x; j++){
 
-            if (trialDist < distanceToLight) {
-                blocked = true;
-                break;
+                float trialDist = distanceTo(ray, spheres[j]);
+
+                if (trialDist < distanceToLight) {
+                    blocked = true;
+                    break;
+                }
+            }
+            if (blocked) {
+                continue;
+            }
+
+            for (int j = 0; j < objectCounts.y; j++) {
+            
+                float trialDist = distanceTo(ray, planes[j]);
+
+                if (trialDist < distanceToLight) {
+                    blocked = true;
+                    break;
+                }
+            }
+
+
+            if (!blocked) {
+                //Apply lighting
+                //diffuse 0.03125
+                counter++;
+                color += 0.03125 * light.color * max(0.0, dot(renderState.normal, fragLight)) * light.strength / (distanceToLight*distanceToLight);
+                //specular
+                color += 0.03125 * light.color * pow(max(0.0, dot(renderState.normal, halfway)),64) * light.strength / (distanceToLight*distanceToLight);
             }
         }
-        if (blocked) {
-            continue;
-        }
 
-        for (int j = 0; j < objectCounts.y; j++) {
+        // if(counter > 0){
+        //     color = color / counter;
+        // }
         
-            float trialDist = distanceTo(ray, planes[j]);
-        
-            if (trialDist < distanceToLight) {
-                blocked = true;
-                break;
-            }
-        }
 
-        if (!blocked) {
-            //Apply lighting
-            //diffuse
-            color += light.color * max(0.0, dot(renderState.normal, fragLight)) * light.strength / (distanceToLight * distanceToLight);
-            //specular
-            color += light.color * pow(max(0.0, dot(renderState.normal, halfway)),64) * light.strength / (distanceToLight * distanceToLight);
-        }
     }
 
     return color;
@@ -550,6 +578,8 @@ vec3 shadowCalc(vec3 position, vec3 normal){
     vec3 final_shadow = vec3(0.0);
     vec3 shadow_cont;
 
+    vec3 rand = vec3(0.0);
+
     for(int j = 0; j < objectCounts.z; j++){
         
         shadow_cont = vec3(0.0);
@@ -557,7 +587,9 @@ vec3 shadowCalc(vec3 position, vec3 normal){
 
         for(int l = 0; l < 16; l++)
         {
-            light_point = points[l]*lights[j].radius + lights[j].position;
+            
+            rand = imageLoad(noise, ivec2(j+1,l+1)).xyz;
+            light_point = points[l]*lights[j].radius+ lights[j].position + rand;
             shadow_ray.direction = normalize(light_point - position);
 
             if(dot(shadow_ray.direction, normal) <= 0){
@@ -567,13 +599,13 @@ vec3 shadowCalc(vec3 position, vec3 normal){
             light_dist = distance(light_point,position);
             shadow_state = trace(shadow_ray,light_dist);
             if(!shadow_state.hit){
-                shadow_cont += ((lights[j].color) * lights[j].strength)/ (light_dist * light_dist);
+                shadow_cont += ((lights[j].color) * lights[j].strength * max(0.0,dot(normal, shadow_ray.direction)))/ (light_dist * light_dist);
                 counter++;
             }
         }
         if(counter > 0)
         {
-            shadow_cont = shadow_cont/16;
+            shadow_cont = shadow_cont/counter;
         }
         final_shadow += shadow_cont;
     }

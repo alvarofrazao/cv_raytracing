@@ -20,6 +20,7 @@ class CubeMap:
             with Image.open(f"textures\\{filepath}\\Nebula_{filenames[i]}.png", mode = "r") as img:
                 width,height = img.size
                 if i == 2:
+                    img = img.rotate(90)
                     img = ImageOps.flip(img)
                     img = ImageOps.mirror(img)
                 elif img == 5:

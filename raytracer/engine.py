@@ -112,9 +112,9 @@ class Engine:
         self.createMegaTexture()
         
 
-        self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 10)
+        self.sphereBuffer = buffer.Buffer(size = 1024, binding = 1, floatCount = 12)
         self.planeBuffer = buffer.Buffer(size = 1024, binding = 2, floatCount = 20)
-        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 9)
+        self.lightBuffer = buffer.Buffer(size = 2, binding = 4, floatCount = 8)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
                                         "shaders/frameBufferFragment.txt")
@@ -204,4 +204,5 @@ class Engine:
         self.colorBuffer.destroy()
         self.sphereBuffer.destroy()
         self.planeBuffer.destroy()
+        self.lightBuffer.destroy()
         glDeleteProgram(self.shader)

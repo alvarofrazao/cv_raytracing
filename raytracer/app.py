@@ -10,8 +10,8 @@ class App:
     def __init__(self):
 
         
-        self.screenWidth = 1366
-        self.screenHeight = 768
+        self.screenWidth = 1920
+        self.screenHeight = 1080
         self.setupPygame()
 
         self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight)
