@@ -22,8 +22,8 @@ class Engine:
 
         self.screenWidth = width
         self.screenHeight = height
-        self.counter = 0
-        self.state = 1
+        self.state = 0
+        self.bounce_count = 1
 
         self.makeAssets(scene)
         self.createNoiseTexture()
@@ -48,7 +48,7 @@ class Engine:
     def createMegaTexture(self):
 
         filenames = [
-            "Wood067","MetalPlates", "Metal01","Marble06","Plastic012","Rubber04"
+            "WoodFloor007_1K-PNG","Metal012_1K-PNG"
         ]
 
         self.megaTexture = megatexture.MegaTexture(filenames)
@@ -98,17 +98,25 @@ class Engine:
 
         with open(filepath,'r') as f:
             compute_src = f.readlines()
-        
+
         shader = compileProgram(compileShader(compute_src, GL_COMPUTE_SHADER))
         
         return shader
 
     def changeScene(self, state):
         self.state = state
-        self.outDated = True
-        counter += 1
-        print(counter)
-        
+        glUseProgram(self.rayTracerShader)
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "state"), self.state) 
+
+    def changeScenePositions(self,scene,number,pos):
+        scene.changeObj(number,pos)
+        self.sphereBuffer = buffer.Buffer(size = len(scene.spheres), binding = 1, floatCount = 12)
+        self.planeBuffer = buffer.Buffer(size = len(scene.planes), binding = 2, floatCount = 20)
+        self.lightBuffer = buffer.Buffer(size = len(scene.lights), binding = 4, floatCount = 8)
+        self.triangleBuffer = buffer.Buffer(size = len(scene.triangles), binding = 5, floatCount = 16)
+
+        self.updateScene(scene)
+
     def makeAssets(self, scene: scene.Scene) -> None:
         """ Make all the stuff. """
 
@@ -121,22 +129,19 @@ class Engine:
         self.sphereBuffer = buffer.Buffer(size = len(scene.spheres), binding = 1, floatCount = 12)
         self.planeBuffer = buffer.Buffer(size = len(scene.planes), binding = 2, floatCount = 20)
         self.lightBuffer = buffer.Buffer(size = len(scene.lights), binding = 4, floatCount = 8)
-        self.triangleBuffer = buffer.Buffer(size = len(scene.triangles), binding = 5, floatCount = 16)
+        self.triangleBuffer = buffer.Buffer(size = len(scene.triangles), binding = 5, floatCount = 20)
 
         self.shader = self.createShader("shaders/frameBufferVertex.txt",
                                         "shaders/frameBufferFragment.txt")
         
         self.rayTracerShader = self.createComputeShader("shaders/rayTracer.glsl")
 
-        self.skybox = cubemap.CubeMap("Skybox")
+        self.skybox = cubemap.CubeMap("sky")
+
+        self.updateScene(scene)
 
         glUseProgram(self.rayTracerShader)
         glUniform1i(glGetUniformLocation(self.rayTracerShader,"skybox"),6)
-    
-    def changeScene(self, state):
-        self.state = state
-        scene.outDated = True
-        print("aqui")
 
 
     def updateScene(self, _scene: scene.Scene) -> None:
@@ -162,8 +167,13 @@ class Engine:
         self.lightBuffer.readFrom()
         self.triangleBuffer.readFrom()
         
-        glUniform1i(glGetUniformLocation(self.rayTracerShader, "state"), self.state) 
         glUniform4iv(glGetUniformLocation(self.rayTracerShader, "objectCounts"), 1, _scene.objectCounts)
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "state"), self.state) 
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "bounce_count"), self.bounce_count)
+
+    def change_bounce(self,count):
+        glUseProgram(self.rayTracerShader)
+        glUniform1i(glGetUniformLocation(self.rayTracerShader, "bounce_count"), int(count))
 
     def prepareScene(self, _scene: scene.Scene) -> None:
         """
@@ -178,9 +188,6 @@ class Engine:
         glUniform3fv(glGetUniformLocation(self.rayTracerShader, "viewer.up"), 1, _scene.camera.up)
 
         self.skybox.use()
-
-        if _scene.outDated:
-            self.updateScene(_scene)
 
         glActiveTexture(GL_TEXTURE6)
         glBindImageTexture(6, self.noiseTexture, 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA32F)

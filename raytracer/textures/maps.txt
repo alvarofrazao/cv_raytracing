@@ -1,8 +1,0 @@
-color
-displacement
-normal
-roughness
-metalness
-specular
-emission
-ao

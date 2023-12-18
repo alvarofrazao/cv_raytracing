@@ -50,6 +50,8 @@ class Buffer:
         self.hostMemory[baseIndex : baseIndex + 3] = _sphere.center[:]
         self.hostMemory[baseIndex + 3] = _sphere.radius
         self.hostMemory[baseIndex + 4 : baseIndex + 7] = _sphere.color[:]
+        self.hostMemory[baseIndex + 7] = _sphere.roughness
+        self.hostMemory[baseIndex + 8] = _sphere.reflectivity
         self.elements_written += 1
     
     def recordPlane(self, i: int, _plane: plane.Plane) -> None:
@@ -84,7 +86,7 @@ class Buffer:
             Record the given sphere in position i, if this exceeds the buffer size,
             the sphere is not recorded.
         """
-
+        #xxxx xxxx xxxx xxxxx
         if i >= self.size:
             return
 
@@ -102,29 +104,6 @@ class Buffer:
 
         self.elements_written += 1
     
-
-    def recordTriangle(self, i: int, _triangle: triangle.Triangle) -> None:
-        """
-            Record the given sphere in position i, if this exceeds the buffer size,
-            the sphere is not recorded.
-        """
-
-        if i >= self.size:
-            return
-
-        baseIndex = self.floatCount * i
-
-        for j in range(3):
-            self.hostMemory[baseIndex + 4*j : baseIndex + 4*j + 3] =\
-                _triangle.corners[j][:]
-        
-        self.hostMemory[baseIndex + 12 : baseIndex + 15] = _triangle.normal[:]
-
-        self.hostMemory[baseIndex + 3] = _triangle.color[0]
-        self.hostMemory[baseIndex + 7] = _triangle.color[1]
-        self.hostMemory[baseIndex + 11] = _triangle.color[2]
-
-        self.elements_written += 1    
     def readFrom(self) -> None:
         """
             Upload the CPU data to the buffer, then arm it for reading.

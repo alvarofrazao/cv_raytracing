@@ -9,4 +9,4 @@ class Sphere:
         self.radius = radius
         self.color = np.array(color,dtype = np.float32)
         self.roughness = roughness
-        self.reflectivity = 1.0
+        self.reflectivity = reflectivity

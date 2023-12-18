@@ -9,13 +9,15 @@ class App:
 
     def __init__(self):
 
-        
+        self.temp = 0
         self.screenWidth = 1366
         self.screenHeight = 768
         self.setupPygame()
         self.scene = scene.Scene()
         self.graphicsEngine = engine.Engine(self.screenWidth, self.screenHeight, self.scene)
-        
+        self.x = 0
+        self.y = 0
+        self.z = 0
 
         self.setupTimer()
 
@@ -65,7 +67,7 @@ class App:
 
             #render
             self.graphicsEngine.renderScene(self.scene)
-
+            print(self.x,self.y,self.z)
             self.handleKeys()
             #self.handleMouse()
 
@@ -75,7 +77,7 @@ class App:
 
     def handleKeys(self):
 
-        rate = self.frameTime / 16
+        rate = 10
 
         keys = pg.key.get_pressed()
 
@@ -87,24 +89,45 @@ class App:
             self.scene.move_player(-0.1 * rate, 0)
         elif keys[pg.K_d]:
             self.scene.move_player(0, 0.1*rate)
-        elif keys[pg.K_LEFT]:
-            phi_increment =   self.frameTime* 0.0005 *((self.screenHeight//2))
-            self.scene.spin_player((0,phi_increment))
-        elif keys[pg.K_RIGHT]:
-            phi_increment =   self.frameTime* 0.0005 * -1 *((self.screenHeight//2))
+        elif keys[pg.K_DOWN]:
+            phi_increment = self.frameTime* 0.0005 *((self.screenHeight//2))
             self.scene.spin_player((0,phi_increment))
         elif keys[pg.K_UP]:
+            phi_increment =   self.frameTime* 0.0005 * -1 *((self.screenHeight//2))
+            self.scene.spin_player((0,phi_increment))
+        elif keys[pg.K_RIGHT]:
             theta_increment = self.frameTime* 0.0005 * -1 *((self.screenWidth//2))
             self.scene.spin_player((theta_increment,0))
-        elif keys[pg.K_DOWN]:
+        elif keys[pg.K_LEFT]:
             theta_increment = self.frameTime* 0.0005 *((self.screenWidth//2))
             self.scene.spin_player((theta_increment,0))
         elif keys[pg.K_1]:
             self.graphicsEngine.changeScene(0)
         elif keys[pg.K_2]:
             self.graphicsEngine.changeScene(1)
+        elif keys[pg.K_4]:
+            self.temp2 = input()
+            self.graphicsEngine.change_bounce(self.temp2)
         elif keys[pg.K_3]:
-            self.graphicsEngine.changeScene(2)            
+            self.temp = input() 
+        elif keys[pg.K_u]:
+            self.x += 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
+        elif keys[pg.K_j]:
+            self.x -= 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
+        elif keys[pg.K_i]:
+            self.y += 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
+        elif keys[pg.K_k]:
+            self.y -= 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
+        elif keys[pg.K_o]:
+            self.z += 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
+        elif keys[pg.K_l]:
+            self.z -= 0.1
+            self.graphicsEngine.changeScenePositions(self.scene,self.temp,[self.x,self.y,self.z]) 
 
     def handleMouse(self):
 
